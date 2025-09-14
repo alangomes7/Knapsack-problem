@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>KnapsackWindow</class>
+ <widget class="QMainWindow" name="KnapsackWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>623</width>
+    <height>534</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>KnapsackWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QFrame" name="frame_file">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>10</y>
+      <width>601</width>
+      <height>80</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+    <widget class="QLabel" name="label_SoftwareDepencies">
+     <property name="geometry">
+      <rect>
+       <x>394</x>
+       <y>49</y>
+       <width>157</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Software Dependencies</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_SoftwarePackages">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>49</y>
+       <width>123</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Software Packages</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButton_run">
+     <property name="geometry">
+      <rect>
+       <x>550</x>
+       <y>13</y>
+       <width>41</width>
+       <height>29</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>run</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_file">
+     <property name="geometry">
+      <rect>
+       <x>11</x>
+       <y>20</y>
+       <width>26</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>File:</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButton_filePath">
+     <property name="geometry">
+      <rect>
+       <x>46</x>
+       <y>13</y>
+       <width>501</width>
+       <height>29</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <underline>false</underline>
+       <stylestrategy>NoAntialias</stylestrategy>
+       <kerning>true</kerning>
+       <hintingpreference>PreferNoHinting</hintingpreference>
+       <fontweight>Thin</fontweight>
+      </font>
+     </property>
+     <property name="focusPolicy">
+      <enum>Qt::FocusPolicy::TabFocus</enum>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_SoftwarePackagesFileNumber">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>49</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_SoftwareDepenciesFileNumber">
+     <property name="geometry">
+      <rect>
+       <x>558</x>
+       <y>49</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QFrame" name="frame_inTheBag">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>100</y>
+      <width>601</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+    <widget class="QLabel" name="label_bagCapacity">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>12</y>
+       <width>91</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Bag Capacity</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_PackedSoftwareDependencies">
+     <property name="geometry">
+      <rect>
+       <x>370</x>
+       <y>10</y>
+       <width>182</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Packed Software Depencies</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_PackedSoftwarePackages">
+     <property name="geometry">
+      <rect>
+       <x>370</x>
+       <y>40</y>
+       <width>173</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Packed Software Packages</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_bagCapacityNumber">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>81</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_algorithm">
+     <property name="geometry">
+      <rect>
+       <x>110</x>
+       <y>10</y>
+       <width>251</width>
+       <height>28</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_PackedSoftwarePackagesNumber">
+     <property name="geometry">
+      <rect>
+       <x>560</x>
+       <y>40</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_PackedSoftwareDependenciesNumber">
+     <property name="geometry">
+      <rect>
+       <x>560</x>
+       <y>10</y>
+       <width>31</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_TempoDeProcessamentoNumber">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>40</y>
+       <width>51</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0s</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_TempoDeProcessamento">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>40</y>
+       <width>171</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Tempo de processamento:</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QFrame" name="frame_logs">
+    <property name="geometry">
+     <rect>
+      <x>9</x>
+      <y>180</y>
+      <width>601</width>
+      <height>302</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="minimumSize">
+     <size>
+      <width>452</width>
+      <height>302</height>
+     </size>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+    <layout class="QGridLayout" name="gridLayout_3">
+     <item row="2" column="0">
+      <widget class="QPlainTextEdit" name="plainTextEdit_logs"/>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_logs">
+       <property name="text">
+        <string>Logs</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>623</width>
+     <height>25</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
