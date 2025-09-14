@@ -42,12 +42,11 @@ QString Package::toQString() const
 {
     QString packageQString;
     packageQString += "Package: " + m_name + "\n";
-    packageQString += "Benefit: " + QString::number(m_benefit) + "MB\n";
-    packageQString += "Single benefit" + QString::number(getSingleBenefit()) + "MB\n";
+    packageQString += "Benefit: " + QString::number(m_benefit) + " MB\n";
+    packageQString += "Single benefit: " + QString::number(getSingleBenefit()) + " MB\n";
 
     for (const Dependency *dependency : m_dependencies) {
-        packageQString += "Dependency: " + dependency->getName() + " - ";
-        packageQString += "Dependency size: " + QString::number(dependency->getSize()) + " MB\n";
+        packageQString += "Dependency: " + dependency->getName() + " | Size: " + QString::number(dependency->getSize()) + " MB\n";
     }
 
     return packageQString;
