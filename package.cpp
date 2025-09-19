@@ -1,53 +1,60 @@
 #include "package.h"
 #include "dependency.h"
 
-Package::Package(const QString &name, int benefit, QObject *parent)
+Package::Package(const std::string& name, int benefit)
     : m_name(name),
-      m_benefit(benefit),
-      QObject(parent)
-{
-    m_dependencies = {};
+      m_benefit(benefit) {
+    // No explicit body needed as members are initialized in the initializer list.
 }
 
-const QList<Dependency*>& Package::getDependencies() const
-{
-    return m_dependencies;
-}
-
-int Package::getBenefit() const
-{
-    return m_benefit;
-}
-
-int Package::getSingleBenefit() const
-{
-    int dependenciesSize = 0;
-    for(Dependency* dependency : m_dependencies){
-        dependenciesSize += dependency->getSize();
-    }
-    return m_benefit - dependenciesSize;
-}
-
-void Package::addDependency(Dependency *dependency)
-{
-    m_dependencies.append(dependency);
-}
-
-QString Package::getName() const
-{
+const std::string& Package::getName() const {
     return m_name;
 }
 
-QString Package::toQString() const
+int Package::getBenefit() const {
+    return m_benefit;
+}
+
+int Package::getDependenciesSize() const
 {
-    QString packageQString;
-    packageQString += "Package: " + m_name + "\n";
-    packageQString += "Benefit: " + QString::number(m_benefit) + " MB\n";
-    packageQString += "Single benefit: " + QString::number(getSingleBenefit()) + " MB\n";
-
-    for (const Dependency *dependency : m_dependencies) {
-        packageQString += "Dependency: " + dependency->getName() + " | Size: " + QString::number(dependency->getSize()) + " MB\n";
+    int dependenciesSize = 0;
+    
+    for (const auto& pair : m_dependencies) {
+        dependenciesSize += pair.second->getSize();
     }
+    return dependenciesSize;
+}
 
-    return packageQString;
+std::unordered_map<std::string, Dependency*>& Package::getDependencies() {
+    return m_dependencies;
+}
+
+const std::unordered_map<std::string, Dependency*>& Package::getDependencies() const {
+    return m_dependencies;
+}
+
+void Package::addDependency(Dependency& dependency) {
+    m_dependencies[dependency.getName()] = &dependency;
+}
+
+std::string Package::toString() const {
+    std::string package_string;
+    package_string += "Package: " + m_name + "\n";
+    package_string += "Benefit: " + std::to_string(m_benefit) + "\n";
+    package_string += "Dependencies (" + std::to_string(m_dependencies.size()) + "):\n";
+
+    if (m_dependencies.empty()) {
+        package_string += "  None\n";
+    } else {
+        // Iterate through the map to list each dependency.
+        for (const auto& pair : m_dependencies) {
+            const Dependency* dependency = pair.second;
+            // Good practice to check if the pointer is valid.
+            if (dependency) {
+                package_string += "  - " + dependency->getName() +
+                                  " (Size: " + std::to_string(dependency->getSize()) + ")\n";
+            }
+        }
+    }
+    return package_string;
 }

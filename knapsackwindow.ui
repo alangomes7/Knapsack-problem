@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>623</width>
+    <width>753</width>
     <height>534</height>
    </rect>
   </property>
@@ -19,7 +19,7 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>601</width>
+      <width>731</width>
       <height>80</height>
      </rect>
     </property>
@@ -32,7 +32,7 @@
     <widget class="QLabel" name="label_SoftwareDepencies">
      <property name="geometry">
       <rect>
-       <x>394</x>
+       <x>490</x>
        <y>49</y>
        <width>157</width>
        <height>20</height>
@@ -45,7 +45,7 @@
     <widget class="QLabel" name="label_SoftwarePackages">
      <property name="geometry">
       <rect>
-       <x>10</x>
+       <x>250</x>
        <y>49</y>
        <width>123</width>
        <height>20</height>
@@ -58,7 +58,7 @@
     <widget class="QPushButton" name="pushButton_run">
      <property name="geometry">
       <rect>
-       <x>550</x>
+       <x>680</x>
        <y>13</y>
        <width>41</width>
        <height>29</height>
@@ -86,7 +86,7 @@
       <rect>
        <x>46</x>
        <y>13</y>
-       <width>501</width>
+       <width>631</width>
        <height>29</height>
       </rect>
      </property>
@@ -109,9 +109,9 @@
     <widget class="QLabel" name="label_SoftwarePackagesFileNumber">
      <property name="geometry">
       <rect>
-       <x>140</x>
+       <x>390</x>
        <y>49</y>
-       <width>41</width>
+       <width>71</width>
        <height>20</height>
       </rect>
      </property>
@@ -122,9 +122,35 @@
     <widget class="QLabel" name="label_SoftwareDepenciesFileNumber">
      <property name="geometry">
       <rect>
-       <x>558</x>
+       <x>660</x>
        <y>49</y>
-       <width>31</width>
+       <width>61</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_maxBagCapacity">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>121</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Max Bag Capacity</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_maxBagCapacityNumber">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>50</y>
+       <width>81</width>
        <height>20</height>
       </rect>
      </property>
@@ -138,7 +164,7 @@
      <rect>
       <x>10</x>
       <y>100</y>
-      <width>601</width>
+      <width>731</width>
       <height>71</height>
      </rect>
     </property>
@@ -151,8 +177,8 @@
     <widget class="QLabel" name="label_bagCapacity">
      <property name="geometry">
       <rect>
-       <x>10</x>
-       <y>12</y>
+       <x>340</x>
+       <y>10</y>
        <width>91</width>
        <height>20</height>
       </rect>
@@ -164,8 +190,8 @@
     <widget class="QLabel" name="label_PackedSoftwareDependencies">
      <property name="geometry">
       <rect>
-       <x>370</x>
-       <y>10</y>
+       <x>440</x>
+       <y>40</y>
        <width>182</width>
        <height>20</height>
       </rect>
@@ -177,8 +203,8 @@
     <widget class="QLabel" name="label_PackedSoftwarePackages">
      <property name="geometry">
       <rect>
-       <x>370</x>
-       <y>40</y>
+       <x>440</x>
+       <y>10</y>
        <width>173</width>
        <height>20</height>
       </rect>
@@ -190,7 +216,7 @@
     <widget class="QLabel" name="label_bagCapacityNumber">
      <property name="geometry">
       <rect>
-       <x>10</x>
+       <x>340</x>
        <y>40</y>
        <width>81</width>
        <height>20</height>
@@ -203,9 +229,9 @@
     <widget class="QComboBox" name="comboBox_algorithm">
      <property name="geometry">
       <rect>
-       <x>110</x>
+       <x>10</x>
        <y>10</y>
-       <width>251</width>
+       <width>211</width>
        <height>28</height>
       </rect>
      </property>
@@ -213,9 +239,9 @@
     <widget class="QLabel" name="label_PackedSoftwarePackagesNumber">
      <property name="geometry">
       <rect>
-       <x>560</x>
-       <y>40</y>
-       <width>31</width>
+       <x>630</x>
+       <y>10</y>
+       <width>81</width>
        <height>20</height>
       </rect>
      </property>
@@ -226,9 +252,9 @@
     <widget class="QLabel" name="label_PackedSoftwareDependenciesNumber">
      <property name="geometry">
       <rect>
-       <x>560</x>
-       <y>10</y>
-       <width>31</width>
+       <x>630</x>
+       <y>40</y>
+       <width>81</width>
        <height>20</height>
       </rect>
      </property>
@@ -236,12 +262,12 @@
       <string>0</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_TempoDeProcessamentoNumber">
+    <widget class="QLabel" name="label_processingTimeNumber">
      <property name="geometry">
       <rect>
-       <x>300</x>
+       <x>150</x>
        <y>40</y>
-       <width>51</width>
+       <width>61</width>
        <height>20</height>
       </rect>
      </property>
@@ -249,17 +275,43 @@
       <string>0s</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_TempoDeProcessamento">
+    <widget class="QLabel" name="label_processingTime">
      <property name="geometry">
       <rect>
-       <x>120</x>
+       <x>10</x>
        <y>40</y>
-       <width>171</width>
+       <width>111</width>
        <height>20</height>
       </rect>
      </property>
      <property name="text">
-      <string>Tempo de processamento:</string>
+      <string>Processing time</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_maxFails">
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>10</y>
+       <width>101</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Max time</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox_executionTime">
+     <property name="geometry">
+      <rect>
+       <x>231</x>
+       <y>37</y>
+       <width>91</width>
+       <height>21</height>
+      </rect>
      </property>
     </widget>
    </widget>
@@ -268,7 +320,7 @@
      <rect>
       <x>9</x>
       <y>180</y>
-      <width>601</width>
+      <width>731</width>
       <height>302</height>
      </rect>
     </property>
@@ -291,15 +343,15 @@
      <enum>QFrame::Shadow::Raised</enum>
     </property>
     <layout class="QGridLayout" name="gridLayout_3">
-     <item row="2" column="0">
-      <widget class="QPlainTextEdit" name="plainTextEdit_logs"/>
-     </item>
      <item row="1" column="0">
       <widget class="QLabel" name="label_logs">
        <property name="text">
         <string>Logs</string>
        </property>
       </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QPlainTextEdit" name="plainTextEdit_logs"/>
      </item>
     </layout>
    </widget>
@@ -309,7 +361,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>623</width>
+     <width>753</width>
      <height>25</height>
     </rect>
    </property>

@@ -1,3 +1,4 @@
+import math
 import random
 import datetime
 
@@ -37,12 +38,11 @@ def gen_instance(m, n, ne, b, benefit_max=600, dep_max=400, seed=None):
     """
     if seed is not None:
         random.seed(seed)
-
     # Validation: ne must be within [m, m*n]
     if ne < m:
         print(f"[!] ne={ne} is too small. Adjusted to {m} to ensure each package has a dependency.")
         ne = m
-    elif ne > m * n:
+    if ne > m * n:
         print(f"[!] ne={ne} is too large. Adjusted to maximum possible {m * n}.")
         ne = m * n
 
@@ -74,13 +74,12 @@ def gen_instance(m, n, ne, b, benefit_max=600, dep_max=400, seed=None):
     for p in pairs:
         out.append(f"{p[0]} {p[1]}")
 
-    return "\n".join(out)
+    return "\n".join(out), ne
 
 
 if __name__ == "__main__":
     # 1. Timestamped filename
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{timestamp}.knapsack.txt"
 
     # 2. User input
     try:
@@ -91,7 +90,9 @@ if __name__ == "__main__":
         m, n, ne, b = map(int, input().split())
 
         # Generate instance
-        instance_data = gen_instance(m, n, ne, b, seed=42)
+        instance_data, ne = gen_instance(m, n, ne, b, seed=42)
+
+        filename = f"{m}_{n}_{ne}_{b}_{timestamp}.knapsack.txt"
 
         # 3. Save to file
         with open(filename, "w") as f:

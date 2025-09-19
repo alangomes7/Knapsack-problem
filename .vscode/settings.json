@@ -114,7 +114,8 @@
         "xloctime": "cpp",
         "xtree": "cpp",
         "qstring": "cpp",
-        "qmainwindow": "cpp"
+        "qmainwindow": "cpp",
+        "random": "cpp"
     },
 
     // ------------------------------------------------------------------------
