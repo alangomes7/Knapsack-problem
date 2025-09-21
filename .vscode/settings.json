@@ -115,7 +115,9 @@
         "xtree": "cpp",
         "qstring": "cpp",
         "qmainwindow": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "coroutine": "cpp",
+        "resumable": "cpp"
     },
 
     // ------------------------------------------------------------------------

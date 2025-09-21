@@ -77,6 +77,11 @@ private:
     void loadFile();
 
     /**
+     * @brief Saves the data from the current algorithm execution.
+     */
+    void saveData();
+
+    /**
      * @brief Displays the list of all available packages in the UI.
      */
     void printPackages();

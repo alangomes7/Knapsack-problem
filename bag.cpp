@@ -6,8 +6,9 @@
 #include <algorithm>
 #include <unordered_set>
 
-Bag::Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm)
+Bag::Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp)
     : m_bagAlgorithm(bagAlgorithm),
+      m_timeStamp(timestamp),
       m_size(0),
       m_algorithmTimeSeconds(0.0) {
     // This constructor creates a new, empty bag, ready to be filled by an algorithm.
@@ -40,12 +41,25 @@ int Bag::getSize() const {
     return m_size;
 }
 
+int Bag::getBenefit() const {
+    int benefit = 0;
+    for(const Package * package : m_baggedPackages){
+        benefit += package->getBenefit();
+    }
+    return benefit;
+}
+
 Algorithm::ALGORITHM_TYPE Bag::getBagAlgorithm() const {
     return m_bagAlgorithm;
 }
 
 double Bag::getAlgorithmTime() const {
     return m_algorithmTimeSeconds;
+}
+
+std::string Bag::getTimestamp() const
+{
+    return m_timeStamp;
 }
 
 void Bag::setAlgorithmTime(double seconds) {
@@ -62,7 +76,7 @@ bool Bag::addPackage(const Package& package) {
 
     // Add the package pointer to our list.
     m_baggedPackages.push_back(&package);
-    m_size = - package.getBenefit();
+    //m_size = - package.getBenefit();
 
     // Add its dependencies. The helper function handles duplicates and updates the bag's total size.
     addDependencies(package.getDependencies());
@@ -124,7 +138,7 @@ bool Bag::canAddPackage(const Package& package, int maxCapacity) const {
     }
 
     // The package can be added if the current size plus the potential increase does not exceed capacity.
-    return (m_size + potentialSizeIncrease - package.getBenefit()) <= maxCapacity;
+    return (m_size + potentialSizeIncrease) <= maxCapacity;
 }
 
 std::string Bag::toString() const {

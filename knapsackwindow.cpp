@@ -4,6 +4,12 @@
 
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QFile>
+#include <QTextStream>
+#include <QDateTime>
+#include <QDebug>
+
+#include <chrono>
 #include <string>
 
 #include "algorithm.h"
@@ -39,7 +45,8 @@ KnapsackWindow::~KnapsackWindow() {
     delete ui;
 }
 
-void KnapsackWindow::initializeUiElements() {
+void KnapsackWindow::initializeUiElements()
+{
     m_bagSize = 0;
     ui->plainTextEdit_logs->setReadOnly(true);
     ui->comboBox_algorithm->addItem("Select Algorithm");
@@ -99,23 +106,83 @@ void KnapsackWindow::onRunButtonClicked() {
     for(auto const& [key, val] : m_availableDependencies) {
         dependenciesVec.push_back(val);
     }
+
+    std::string timeStamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss").toStdString();
     int executionTime = (ui->comboBox_executionTime->currentText().remove("s")).toInt();
     // Run each algorithm and store the resulting bag.
     m_algorithm = new Algorithm(executionTime);
-    m_bags.push_back(m_algorithm->run(Algorithm::ALGORITHM_TYPE::RANDOM, m_bagSize, packagesVec, dependenciesVec));
-    m_bags.push_back(m_algorithm->run(Algorithm::ALGORITHM_TYPE::GREEDY, m_bagSize, packagesVec, dependenciesVec));
-    m_bags.push_back(m_algorithm->run(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY, m_bagSize, packagesVec, dependenciesVec));
+    m_bags = m_algorithm->run(Algorithm::ALGORITHM_TYPE::RANDOM, m_bagSize, packagesVec, dependenciesVec, timeStamp);
 
     // Populate the dropdown so the user can view the results of each run.
     ui->comboBox_algorithm->clear();
     ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::RANDOM)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::GREEDY)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::GREEDY_Package_Benefit)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::GREEDY_Package_Size)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::GREEDY_Package_Benefit_Ratio)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit_Ratio)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Size)));
+
+    // Saving the algorithm execution results
+    saveData();
 }
 
 void KnapsackWindow::onAlgorithmChanged() {
     // When the user selects a different algorithm result, update the display.
     printBag(ui->comboBox_algorithm->currentText().toStdString());
+}
+
+void KnapsackWindow::saveData()
+{
+    if (m_bags.empty()) return;
+
+    QFile inputFile(m_filePath);
+    QFileInfo inputInfo(inputFile);
+
+    // Fix timestamp format: replace ":" with "-" for valid filenames
+    const QString csvFile = inputInfo.absolutePath() + "/results_" + "knapsackResults.csv";
+
+    QFile file(csvFile);
+
+    // Open file in append mode (creates if not exists)
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        qWarning() << "Error: Could not create or open" << csvFile;
+        return;
+    }
+
+    QTextStream out(&file);
+
+    // If file is empty, write header
+    if (file.size() == 0) {
+        out << "Algoritmo,File name,Timestamp,Tempo de Processamento (s),Pacotes,Depenências,Peso da mochila,Benefício mochila\n";
+    }
+
+    for (const Bag *bagData : m_bags) {
+        if (!bagData) continue;
+
+        Algorithm algorithmHelper(0);
+        QString algoritmo     = QString::fromStdString(algorithmHelper.toString(bagData->getBagAlgorithm()));
+        QString fileName      = QFileInfo(m_filePath).fileName();
+        QString timestamp     = QString::fromStdString(bagData->getTimestamp());
+        double processingTime = bagData->getAlgorithmTime();
+        int packages          = bagData->getPackages().size();
+        int dependencies      = bagData->getDependencies().size();
+        int bagWeight         = bagData->getSize();
+        int bagBenefit        = bagData->getBenefit();
+
+        // Write row
+        out << algoritmo << ","
+            << fileName << ","
+            << timestamp << ","
+            << QString::number(processingTime, 'f', 5) << ","
+            << packages << ","
+            << dependencies << ","
+            << bagWeight << ","
+            << bagBenefit << "\n";
+    }
+
+    file.close();
+    qDebug() << "CSV written to" << csvFile;
 }
 
 void KnapsackWindow::loadFile() {
@@ -237,5 +304,6 @@ void KnapsackWindow::printBag(const std::string& algorithmName) {
     ui->label_PackedSoftwarePackagesNumber->setText(QString::number(bagToPrint->getPackages().size()));
     ui->label_PackedSoftwareDependenciesNumber->setText(QString::number(bagToPrint->getDependencies().size()));
     ui->label_bagCapacityNumber->setText(QString::number(bagToPrint->getSize()) + " MB");
-    ui->label_processingTimeNumber->setText(QString::number(bagToPrint->getAlgorithmTime()));
+    ui->label_bagBenefitNumber->setText(QString::number(bagToPrint->getBenefit()) + " MB");
+    ui->label_processingTimeNumber->setText(QString::number(bagToPrint->getAlgorithmTime()) + " s");
 }

@@ -13,41 +13,42 @@ Algorithm::Algorithm(double maxTime)
     : m_maxTime(maxTime) {
 }
 
-Bag *Algorithm::run(ALGORITHM_TYPE algorithm, int bagSize,
+// Executes all strattegyies
+std::vector<Bag*> Algorithm::run(ALGORITHM_TYPE algorithm,int bagSize,
                     const std::vector<Package *> &packages,
-                    const std::vector<Dependency *> &dependencies)
+                    const std::vector<Dependency *> &dependencies,
+                    const std::string& timestamp)
 {
-
-    Bag* resultBag = nullptr;
-
-    switch (algorithm) {
-        case ALGORITHM_TYPE::RANDOM:
-            resultBag = randomBag(bagSize, packages, dependencies);
-            break;
-        case ALGORITHM_TYPE::GREEDY:
-            resultBag = greedyBagByBenefitToSizeRatio(bagSize, packages, dependencies);
-            break;
-        case ALGORITHM_TYPE::RANDOM_GREEDY:
-            resultBag = randomGreedy(bagSize, packages, dependencies);
-            break;
-        case ALGORITHM_TYPE::NONE:
-        default:
-            // If no valid algorithm is specified, create an empty bag.
-            resultBag = new Bag(ALGORITHM_TYPE::NONE);
-            break;
+    m_timestamp = timestamp;
+    std::vector<Bag*> resultBag;
+    resultBag.push_back(randomBag(bagSize, packages, dependencies));
+    std::vector<Bag*> bagsGreedy = greedyBag(bagSize, packages, dependencies);
+    std::vector<Bag*> bagsRandomGreedy = randomGreedy(bagSize, packages, dependencies);
+    for(Bag* bagGreedy : bagsGreedy){
+        resultBag.push_back(bagGreedy);
+    }
+    for(Bag* bagRandomGreedy : bagsRandomGreedy){
+        resultBag.push_back(bagRandomGreedy);
     }
     return resultBag;
 }
 
 std::string Algorithm::toString(ALGORITHM_TYPE algorithm) const {
-    // This helper function converts the algorithm enum to a human-readable string.
     switch (algorithm) {
         case ALGORITHM_TYPE::RANDOM:
             return "RANDOM";
-        case ALGORITHM_TYPE::GREEDY:
-            return "GREEDY";
-        case ALGORITHM_TYPE::RANDOM_GREEDY:
-            return "RANDOM_GREEDY";
+        case ALGORITHM_TYPE::GREEDY_Package_Benefit:
+            return "GREEDY -> Package: Benefit";
+        case ALGORITHM_TYPE::GREEDY_Package_Benefit_Ratio:
+            return "GREEDY -> Package: Benefit Ratio";
+        case ALGORITHM_TYPE::GREEDY_Package_Size:
+            return "GREEDY -> Package: Size";
+        case ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit:
+            return "RANDOM_GREEDY (Package: Benefit)";
+        case ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit_Ratio:
+            return "RANDOM_GREEDY (Package: Benefit Ratio)";
+        case ALGORITHM_TYPE::RANDOM_GREEDY_Package_Size:
+            return "RANDOM_GREEDY (Package: Size)";
         default:
             return "NONE";
     }
@@ -62,104 +63,156 @@ Bag* Algorithm::randomBag(int bagSize, const std::vector<Package*>& packages,
     // To avoid modifying the original list of packages, we create a mutable copy.
     auto mutablePackages = packages;
 
-    // Define the package picking strategy: select a random package from the list.
-    auto pickRandomPackage = [&]() -> Package* {
-        if (mutablePackages.empty()) {
-            return nullptr;
-        }
-
-        int index = randomNumberInt(0, mutablePackages.size() - 1);
-        Package* pickedPackage = mutablePackages[index];
-
-        // Remove the chosen package from the list to prevent picking it again.
-        mutablePackages.erase(mutablePackages.begin() + index);
-
-        return pickedPackage;
+    auto pickStrategy = [&](std::vector<Package*>& pkgs) {
+        return this->pickRandomPackage(pkgs);
     };
 
-    return fillBagWithStrategy(bagSize, mutablePackages, pickRandomPackage, ALGORITHM_TYPE::RANDOM);
+    return fillBagWithStrategy(bagSize, mutablePackages, pickStrategy, ALGORITHM_TYPE::RANDOM);
 }
 
-Bag* Algorithm::greedyBagByBenefitToSizeRatio(int bagSize, const std::vector<Package*>& packages,
-                                         const std::vector<Dependency*>& dependencies) {
-    auto sortedPackages = sortedPackagesByBenefitToSizeRatio(packages);
+std::vector<Bag*> Algorithm::greedyBag(int bagSize, const std::vector<Package*>& packages,
+                                       const std::vector<Dependency*>& dependencies) {
+    std::vector<Bag*> bags;
 
-    // The picking strategy is to always take the next best package from the sorted list.
-    auto pickTopPackage = [&sortedPackages]() -> Package* {
-        if (sortedPackages.empty()) {
-            return nullptr;
-        }
-        // Get the package at the front of the list (which has the highest benefit).
-        Package* pickedPackage = sortedPackages.front();
-        sortedPackages.erase(sortedPackages.begin());
+    std::vector<Package *> sortedByRatio = sortedPackagesByBenefitToSizeRatio(packages);
+    std::vector<Package *> sortedByBenefit = sortedPackagesByBenefit(packages);
+    std::vector<Package *> sortedBySize = sortedPackagesBySize(packages);
 
-        return pickedPackage;
+    auto pickStrategy = [&](std::vector<Package*>& pkgs) {
+        return this->pickTopPackage(pkgs);
     };
 
-    return fillBagWithStrategy(bagSize, sortedPackages, pickTopPackage, ALGORITHM_TYPE::GREEDY);
+    bags.push_back(fillBagWithStrategy(bagSize, sortedByRatio, pickStrategy,
+                                       ALGORITHM_TYPE::GREEDY_Package_Benefit_Ratio));
+
+    bags.push_back(fillBagWithStrategy(bagSize, sortedByBenefit, pickStrategy,
+                                       ALGORITHM_TYPE::GREEDY_Package_Benefit));
+
+    bags.push_back(fillBagWithStrategy(bagSize, sortedBySize, pickStrategy,
+                                       ALGORITHM_TYPE::GREEDY_Package_Size));
+
+    return bags;
 }
 
-Bag* Algorithm::randomGreedy(int bagSize, const std::vector<Package*>& packages,
-                             const std::vector<Dependency*>& dependencies) {
-    auto sortedPackages = sortedPackagesByBenefitToSizeRatio(packages);
+std::vector<Bag*> Algorithm::randomGreedy(int bagSize, const std::vector<Package*>& packages,
+                                          const std::vector<Dependency*>& dependencies) {
+    std::vector<Bag*> bags;
+    std::vector<Package *> sortedByRatio = sortedPackagesByBenefitToSizeRatio(packages);
+    std::vector<Package *> sortedByBenefit = sortedPackagesByBenefit(packages);
+    std::vector<Package *> sortedBySize = sortedPackagesBySize(packages);
 
-    // The picking strategy selects randomly from the top N best packages.
-    auto pickSemiRandomPackage = [&sortedPackages, this]() -> Package* {
-        if (sortedPackages.empty()) {
-            return nullptr;
-        }
-        // Define the size of the candidate pool (e.g., top 10 packages or fewer if list is small).
-        int candidatePoolSize = std::min(10, static_cast<int>(sortedPackages.size()));
-
-        // Pick a random package from this elite pool.
-        int index = randomNumberInt(0, candidatePoolSize - 1);
-        Package* pickedPackage = sortedPackages[index];
-
-        sortedPackages.erase(sortedPackages.begin() + index);
-
-        return pickedPackage;
+    auto pickStrategy = [&](std::vector<Package*>& pkgs) {
+        const int candidatePoolSize = 10;
+        return this->pickSemiRandomPackage(pkgs, candidatePoolSize);
     };
 
-    return fillBagWithStrategy(bagSize, sortedPackages, pickSemiRandomPackage, ALGORITHM_TYPE::RANDOM_GREEDY);
+    bags.push_back(fillBagWithStrategy(bagSize, sortedByBenefit, pickStrategy,
+                                       ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit));
+    bags.push_back(fillBagWithStrategy(bagSize, sortedByRatio, pickStrategy,
+                                       ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit_Ratio));
+    bags.push_back(fillBagWithStrategy(bagSize, sortedBySize, pickStrategy,
+                                       ALGORITHM_TYPE::RANDOM_GREEDY_Package_Size));
+    return bags;
 }
-
 
 // ===================================================================
 // == Core Logic and Utilities
 // ===================================================================
 
+Package *Algorithm::pickRandomPackage(std::vector<Package *> &packageList)
+{
+    // Return nullptr immediately if the vector is empty.
+    if (packageList.empty()) {
+        return nullptr;
+    }
+
+    // Generate a random index within the valid range of the vector.
+    int index = randomNumberInt(0, packageList.size() - 1);
+    Package* pickedPackage = packageList[index];
+
+    // Erase the chosen package from the vector using its iterator.
+    packageList.erase(packageList.begin() + index);
+
+    return pickedPackage;
+}
+
+Package *Algorithm::pickTopPackage(std::vector<Package *> &packageList)
+{
+    if (packageList.empty()) {
+        return nullptr;
+    }
+    
+    // Get the package at the front of the list.
+    Package* pickedPackage = packageList.front();
+    
+    // Remove the package from the list.
+    packageList.erase(packageList.begin());
+
+    return pickedPackage;
+}
+
+Package *Algorithm::pickSemiRandomPackage(std::vector<Package *> &packageList, int poolSize)
+{
+    // Immediately return nullptr if the vector is empty.
+    if (packageList.empty()) {
+        return nullptr;
+    }
+
+    // Determine the actual size of the candidate pool. It's either the desired
+    // poolSize or the total number of packages, whichever is smaller.
+    int candidatePoolSize = std::min(poolSize, static_cast<int>(packageList.size()));
+
+    // Pick a random index from within this elite candidate pool.
+    int index = randomNumberInt(0, candidatePoolSize - 1);
+    Package* pickedPackage = packageList[index];
+
+    // Remove the chosen package from the vector to prevent it from being picked again.
+    packageList.erase(packageList.begin() + index);
+
+    return pickedPackage;
+}
+
 Bag* Algorithm::fillBagWithStrategy(int bagSize, std::vector<Package*>& packages,
-                                    const std::function<Package*()>& pickPackage, ALGORITHM_TYPE type) {
-    // This is the core engine that iteratively fills a bag using a given method (`pickPackage`).
-    auto bag = new Bag(type);
+                                     std::function<Package*(std::vector<Package*>&)> pickStrategy,
+                                     ALGORITHM_TYPE type) {
+    auto bag = new Bag(type, m_timestamp);
     if (packages.empty()) {
-        return bag; // Return an empty bag if there are no packages to choose from.
+        return bag;
     }
 
     auto compatibilityCache = std::unordered_map<const Package*, bool>();
-    std::chrono::duration<double> duration = std::chrono::duration<double>(0.0);
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    // Loop until we either fill the bag
-    std::chrono::duration<double> m_maxTime_seconds(m_maxTime);
-    while (duration <= m_maxTime_seconds) {
-        // 1. Get the next package using the provided strategy (random, greedy, etc.).
-        Package* packageToAdd = pickPackage();
+    std::chrono::duration<double> max_duration_seconds(m_maxTime);
+    while (std::chrono::high_resolution_clock::now() - start_time < max_duration_seconds) {
+        Package* packageToAdd = pickStrategy(packages);
         if (!packageToAdd) {
             break; // Stop if the strategy provides no more packages.
         }
 
-        // 2. Check if this package can be added without violating constraints.
         if (canPackageBeAdded(*bag, *packageToAdd, bagSize, compatibilityCache)) {
-            // 3. Attempt to add the package. The Bag class handles dependency checks.
             bag->addPackage(*packageToAdd);
         }
-        auto end_time = std::chrono::high_resolution_clock::now();
-        duration = end_time - start_time;
     }
-    bag->setAlgorithmTime(duration.count()); // Record how long the algorithm took.
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+    bag->setAlgorithmTime(elapsed_seconds.count());
 
     return bag;
+}
+
+std::vector<Package *> Algorithm::sortedPackagesByBenefit(const std::vector<Package *> &packages)
+{
+        // Create a copy of the package list to avoid modifying the original.
+    auto sortedList = packages;
+
+    // Sort the list in-place.
+    std::sort(sortedList.begin(), sortedList.end(), [](const Package* a, const Package* b) {
+        // The comparison function sorts packages from highest benefit to lowest.
+        return a->getBenefit() > b->getBenefit();
+    });
+    return sortedList;
 }
 
 std::vector<Package*> Algorithm::sortedPackagesByBenefitToSizeRatio(const std::vector<Package*>& packages) {
@@ -172,6 +225,19 @@ std::vector<Package*> Algorithm::sortedPackagesByBenefitToSizeRatio(const std::v
         int bDependenciesSize = b->getDependenciesSize();
         // The comparison function sorts packages from highest benefit to lowest.
         return a->getBenefit() + aDependenciesSize> b->getBenefit() + bDependenciesSize;
+    });
+    return sortedList;
+}
+
+std::vector<Package *> Algorithm::sortedPackagesBySize(const std::vector<Package *> &packages)
+{
+        // Create a copy of the package list to avoid modifying the original.
+    auto sortedList = packages;
+
+    // Sort the list in-place.
+    std::sort(sortedList.begin(), sortedList.end(), [](const Package* a, const Package* b) {
+        // The comparison function sorts packages from highest benefit to lowest.
+        return a->getDependenciesSize() < b->getDependenciesSize();
     });
     return sortedList;
 }

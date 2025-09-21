@@ -21,8 +21,9 @@ public:
     /**
      * @brief Constructs a new, empty Bag.
      * @param bagAlgorithm The type of algorithm that will be used to fill this bag.
+     * @param timestamp The timestamp indicating when this bag was created.
      */
-    explicit Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm);
+    explicit Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp);
 
     /**
      * @brief Constructs a new Bag pre-filled with a list of packages.
@@ -51,6 +52,12 @@ public:
      */
     int getSize() const;
 
+        /**
+     * @brief Gets the total combined benefit of all packages in the bag.
+     * @return The total benefit as an integer.
+     */
+    int getBenefit() const;
+
     /**
      * @brief Gets the type of algorithm used to create this bag's contents.
      * @return The ALGORITHM_TYPE enum value.
@@ -62,6 +69,12 @@ public:
      * @return The time in seconds as a double.
      */
     double getAlgorithmTime() const;
+
+    /**
+     * @brief Gets the formatted timestamp for when the algorithm finished.
+     * @return A string representing the timestamp (e.g., "YYYY-MM-DD HH:MM:SS").
+     */
+    std::string getTimestamp() const;
 
     /**
      * @brief Sets the execution time of the algorithm.
@@ -110,6 +123,7 @@ private:
     void addDependencies(const std::unordered_map<std::string, Dependency*>& dependencies);
 
     Algorithm::ALGORITHM_TYPE m_bagAlgorithm;
+    std::string m_timeStamp = "0000-00-00 00:00:00";
     int m_size;
     double m_algorithmTimeSeconds;
     std::vector<const Package*> m_baggedPackages;
