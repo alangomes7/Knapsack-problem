@@ -66,6 +66,11 @@ void Bag::setAlgorithmTime(double seconds) {
     m_algorithmTimeSeconds = seconds;
 }
 
+void Bag::setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm)
+{
+    m_bagAlgorithm = bagAlgorithm;
+}
+
 bool Bag::addPackage(const Package& package) {
     // Use std::find to check if a pointer to this package already exists in our vector.
     auto it = std::find(m_baggedPackages.begin(), m_baggedPackages.end(), &package);

@@ -43,6 +43,7 @@ public:
         RANDOM_GREEDY_Package_Benefit,              ///< Hybrid: Randomly selects from a top-candidate pool sorted by benefit.
         RANDOM_GREEDY_Package_Benefit_Ratio,        ///< Hybrid: Randomly selects from a top-candidate pool sorted by benefit-to-size ratio.
         RANDOM_GREEDY_Package_Size,                 ///< Hybrid: Randomly selects from a top-candidate pool sorted by smallest size.
+        VND                                         ///< VND
     };
 
     /**
@@ -113,7 +114,7 @@ private:
      * @return A pointer to the selected Package, or `nullptr` if the list is empty.
      */
     Package* pickSemiRandomPackage(std::vector<Package*>& packageList, int poolSize = 10);
-    
+
     /**
      * @brief A generic worker function that fills a bag using a specified package-picking strategy.
      * @details This function implements a template method pattern. It iteratively calls the
@@ -138,6 +139,12 @@ private:
      */
     Bag* randomBag(int bagSize, const std::vector<Package*>& packages,
                    const std::vector<Dependency*>& dependencies);
+
+    /**
+     * @brief Creates a new vector of packages sorted by benefit in descending order.
+     * @param packages The original list of packages to sort.
+     */
+    Bag* vndBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages);
 
     /**
      * @brief Implements the family of greedy selection algorithms.

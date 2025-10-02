@@ -83,6 +83,12 @@ public:
     void setAlgorithmTime(double seconds);
 
     /**
+     * @brief Sets the algorithm type for the bag.
+     * @param bagAlgorithm The algorithm type to set.
+     */
+    void setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm);
+
+    /**
      * @brief Attempts to add a package to the bag.
      *
      * This method will add the package and its unresolved dependencies. It checks

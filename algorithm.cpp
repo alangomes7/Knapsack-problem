@@ -30,6 +30,18 @@ std::vector<Bag*> Algorithm::run(ALGORITHM_TYPE algorithm,int bagSize,
     for(Bag* bagRandomGreedy : bagsRandomGreedy){
         resultBag.push_back(bagRandomGreedy);
     }
+
+    // Find the best greedy solution to use as a starting point for VND
+    Bag* bestGreedyBag = nullptr;
+    int bestGreedyBenefit = -1;
+    for (Bag* b : resultBag) {
+        if (b->getBenefit() > bestGreedyBenefit) {
+            bestGreedyBenefit = b->getBenefit();
+            bestGreedyBag = b;
+        }
+    }
+
+    resultBag.push_back(vndBag(bagSize, bestGreedyBag, packages));
     return resultBag;
 }
 
@@ -49,6 +61,8 @@ std::string Algorithm::toString(ALGORITHM_TYPE algorithm) const {
             return "RANDOM_GREEDY (Package: Benefit Ratio)";
         case ALGORITHM_TYPE::RANDOM_GREEDY_Package_Size:
             return "RANDOM_GREEDY (Package: Size)";
+        case ALGORITHM_TYPE::VND:
+            return "VND";
         default:
             return "NONE";
     }
@@ -68,6 +82,58 @@ Bag* Algorithm::randomBag(int bagSize, const std::vector<Package*>& packages,
     };
 
     return fillBagWithStrategy(bagSize, mutablePackages, pickStrategy, ALGORITHM_TYPE::RANDOM);
+}
+
+Bag *Algorithm::vndBag(int bagSize, Bag *initialBag, const std::vector<Package *> &allPackages)
+{
+    auto bestBag = new Bag(*initialBag);
+    bestBag->setBagAlgorithm(ALGORITHM_TYPE::VND);
+    bool improved = true;
+
+    std::chrono::duration<double> max_duration_seconds(m_maxTime);
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    while (improved && std::chrono::high_resolution_clock::now() - start_time < max_duration_seconds) {
+        improved = false;
+        // Neighborhood 1: Swap one package from the bag with one outside
+        const auto& packagesInBag = bestBag->getPackages();
+        std::vector<Package*> packagesOutsideBag;
+
+        for (Package* p : allPackages) {
+            bool inBag = false;
+            for (const Package* pInBag : packagesInBag) {
+                if (p->getName() == pInBag->getName()) {
+                    inBag = true;
+                    break;
+                }
+            }
+            if (!inBag) {
+                packagesOutsideBag.push_back(p);
+            }
+        }
+
+        for (const Package* packageIn : packagesInBag) {
+            for (Package* packageOut : packagesOutsideBag) {
+                Bag tempBag = *bestBag;
+                tempBag.removePackage(*packageIn);
+                if (tempBag.canAddPackage(*packageOut, bagSize)) {
+                    tempBag.addPackage(*packageOut);
+                    if (tempBag.getBenefit() > bestBag->getBenefit()) {
+                        delete bestBag;
+                        bestBag = new Bag(tempBag);
+                        improved = true;
+                        goto next_iteration; // Exit inner loops and restart with the new best bag
+                    }
+                }
+            }
+        }
+        next_iteration:;
+    }
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+    bestBag->setAlgorithmTime(elapsed_seconds.count());
+    return bestBag;
 }
 
 std::vector<Bag*> Algorithm::greedyBag(int bagSize, const std::vector<Package*>& packages,
