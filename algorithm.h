@@ -43,7 +43,8 @@ public:
         RANDOM_GREEDY_Package_Benefit,              ///< Hybrid: Randomly selects from a top-candidate pool sorted by benefit.
         RANDOM_GREEDY_Package_Benefit_Ratio,        ///< Hybrid: Randomly selects from a top-candidate pool sorted by benefit-to-size ratio.
         RANDOM_GREEDY_Package_Size,                 ///< Hybrid: Randomly selects from a top-candidate pool sorted by smallest size.
-        VND                                         ///< VND
+        VND,                                        ///< VND
+        VNS                                         ///< VNS
     };
 
     /**
@@ -147,6 +148,59 @@ private:
     Bag* vndBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages);
 
     /**
+     * @brief Implements the Variable Neighborhood Search (VNS) metaheuristic to improve an initial solution.
+     * @details VNS explores different neighborhood structures to escape local optima. It starts with an
+     * initial solution and iteratively applies a `shake` function to perturb the solution and a
+     * `localSearch` function to find a new local optimum.
+     *
+     * @param bagSize The maximum capacity of the bag.
+     * @param initialBag A pointer to the initial `Bag` solution to be improved.
+     * @param allPackages A complete list of all available packages for generating neighbors.
+     * @return A pointer to a new `Bag` object representing the best solution found by VNS.
+     */
+    Bag* vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages);
+    
+    /**
+     * @brief Perturbs the current solution to escape local optima by performing a series of random swaps.
+     * @details This function is a key component of the VNS algorithm. It generates a neighboring solution
+     * by randomly removing `k` packages from the current bag and replacing them with `k` different
+     * packages that are not already in the bag, while ensuring the new combination is valid.
+     *
+     * @param currentBag The current `Bag` solution to be perturbed.
+     * @param k The neighborhood size, indicating how many packages to swap.
+     * @param allPackages A complete list of all available packages.
+     * @param bagSize The maximum capacity of the bag.
+     * @return A new `Bag` object representing the perturbed solution.
+     */
+    Bag* shake(const Bag& currentBag, int k, const std::vector<Package*>& allPackages, int bagSize);
+
+    /**
+     * @brief Improves a solution by exploring its neighborhood.
+     * @details This function is part of the VNS algorithm. It systematically explores the neighborhood
+     * of the `currentBag` solution, looking for a better one. If a better solution is found,
+     * the `currentBag` is updated to this new, improved solution.
+     *
+     * @param currentBag A reference to the `Bag` solution to be improved. This object may be modified.
+     * @param bagSize The maximum capacity of the bag.
+     * @param allPackages A complete list of all available packages for generating neighbors.
+     * @return `true` if a better solution was found and `currentBag` was improved, `false` otherwise.
+     */
+    bool localSearch(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages);
+
+    /**
+     * @brief Systematically explores the swap neighborhood of a solution to find an improvement.
+     * @details This function tries to improve the current solution by swapping one package from inside the
+     * bag with one package from outside the bag. It iterates through all possible valid swaps and
+     * applies the first one that results in a higher total benefit.
+     *
+     * @param currentBag A reference to the `Bag` solution to be improved. This object may be modified.
+     * @param bagSize The maximum capacity of the bag.
+     * @param allPackages A complete list of all available packages.
+     * @return `true` if an improved solution was found and applied, `false` otherwise.
+     */
+    bool exploreSwapNeighborhood(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages);
+
+    /**
      * @brief Implements the family of greedy selection algorithms.
      * @details This method generates three distinct solutions. It creates three sorted lists of
      * packages based on different criteria (benefit, size, benefit/size ratio) and then
@@ -201,6 +255,11 @@ private:
      * @details This function can be used to build an adjacency list or map representation
      * of the dependency graph, allowing for O(1) or O(log n) lookup of a package's
      * dependencies instead of iterating through the full list every time.
+     *
+     * @param packages A constant reference to a vector of `Package` pointers, representing all available packages.
+     *                 This list is used to initialize the dependency graph structure.
+     * @param dependencies A constant reference to a vector of `Dependency` pointers, where each pointer
+     *                     indicates a prerequisite relationship between two packages.
      */
     void precomputeDependencyGraph(const std::vector<Package*>& packages,
                                    const std::vector<Dependency*>& dependencies);

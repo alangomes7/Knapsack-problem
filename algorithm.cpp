@@ -42,6 +42,7 @@ std::vector<Bag*> Algorithm::run(ALGORITHM_TYPE algorithm,int bagSize,
     }
 
     resultBag.push_back(vndBag(bagSize, bestGreedyBag, packages));
+    resultBag.push_back(vnsBag(bagSize, bestGreedyBag, packages));
     return resultBag;
 }
 
@@ -63,6 +64,8 @@ std::string Algorithm::toString(ALGORITHM_TYPE algorithm) const {
             return "RANDOM_GREEDY (Package: Size)";
         case ALGORITHM_TYPE::VND:
             return "VND";
+        case ALGORITHM_TYPE::VNS:
+            return "VNS";
         default:
             return "NONE";
     }
@@ -134,6 +137,122 @@ Bag *Algorithm::vndBag(int bagSize, Bag *initialBag, const std::vector<Package *
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     bestBag->setAlgorithmTime(elapsed_seconds.count());
     return bestBag;
+}
+
+Bag* Algorithm::vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages) {
+    auto bestBag = new Bag(*initialBag);
+    bestBag->setBagAlgorithm(ALGORITHM_TYPE::VNS);
+
+    int k = 1;
+    const int k_max = 5; // The maximum neighborhood size for shaking
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> max_duration_seconds(m_maxTime);
+
+    while (std::chrono::high_resolution_clock::now() - start_time < max_duration_seconds && k <= k_max) {
+        // 1. Shaking: Generate a random solution in the k-th neighborhood
+        Bag* shakenBag = shake(*bestBag, k, allPackages, bagSize);
+
+        // 2. Local Search: Find the local optimum from the shaken solution
+        localSearch(*shakenBag, bagSize, allPackages);
+
+        // 3. Move: If the new solution is better, update the best solution
+        if (shakenBag->getBenefit() > bestBag->getBenefit()) {
+            delete bestBag;
+            bestBag = shakenBag;
+            k = 1; // Reset to the first neighborhood
+        } else {
+            delete shakenBag;
+            k++; // Move to the next neighborhood
+        }
+    }
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
+    bestBag->setAlgorithmTime(elapsed_seconds.count());
+    return bestBag;
+}
+
+Bag* Algorithm::shake(const Bag& currentBag, int k, const std::vector<Package*>& allPackages, int bagSize) {
+    Bag* newBag = new Bag(currentBag);
+
+    // Randomly remove k packages
+    for (int i = 0; i < k && !newBag->getPackages().empty(); ++i) {
+        int index = randomNumberInt(0, newBag->getPackages().size() - 1);
+        const Package* packageToRemove = newBag->getPackages()[index];
+        newBag->removePackage(*packageToRemove);
+    }
+
+    // Randomly add k packages
+    std::vector<Package*> packagesOutside;
+    for (Package* p : allPackages) {
+        bool inBag = false;
+        for (const auto* pkgInBag : newBag->getPackages()) {
+            if (p->getName() == pkgInBag->getName()) {
+                inBag = true;
+                break;
+            }
+        }
+        if (!inBag) {
+            packagesOutside.push_back(p);
+        }
+    }
+
+    for (int i = 0; i < k && !packagesOutside.empty(); ++i) {
+        int index = randomNumberInt(0, packagesOutside.size() - 1);
+        Package* packageToAdd = packagesOutside[index];
+        if (newBag->canAddPackage(*packageToAdd, bagSize)) {
+            newBag->addPackage(*packageToAdd);
+        }
+        packagesOutside.erase(packagesOutside.begin() + index);
+    }
+
+    return newBag;
+}
+
+bool Algorithm::localSearch(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages) {
+    bool improved = false;
+    bool localOptimum = false;
+    while (!localOptimum) {
+        if (exploreSwapNeighborhood(currentBag, bagSize, allPackages)) {
+            improved = true;
+        } else {
+            localOptimum = true; // No more improvements found
+        }
+    }
+    return improved;
+}
+
+bool Algorithm::exploreSwapNeighborhood(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages) {
+    const auto& packagesInBag = currentBag.getPackages();
+    std::vector<Package*> packagesOutsideBag;
+    for (Package* p : allPackages) {
+        bool inBag = false;
+        for (const Package* pInBag : packagesInBag) {
+            if (p->getName() == pInBag->getName()) {
+                inBag = true;
+                break;
+            }
+        }
+        if (!inBag) {
+            packagesOutsideBag.push_back(p);
+        }
+    }
+
+    for (const Package* packageIn : packagesInBag) {
+        for (Package* packageOut : packagesOutsideBag) {
+            Bag tempBag = currentBag;
+            tempBag.removePackage(*packageIn);
+            if (tempBag.canAddPackage(*packageOut, bagSize)) {
+                tempBag.addPackage(*packageOut);
+                if (tempBag.getBenefit() > currentBag.getBenefit()) {
+                    currentBag = tempBag;
+                    return true; // Improvement found
+                }
+            }
+        }
+    }
+    return false; // No improvement found
 }
 
 std::vector<Bag*> Algorithm::greedyBag(int bagSize, const std::vector<Package*>& packages,

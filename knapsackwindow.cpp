@@ -123,6 +123,7 @@ void KnapsackWindow::onRunButtonClicked() {
     ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit_Ratio)));
     ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Size)));
     ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::VND)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::VNS)));
 
     // Saving the algorithm execution results
     saveData();
