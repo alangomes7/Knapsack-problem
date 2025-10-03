@@ -47,6 +47,13 @@ public:
         VNS                                         ///< VNS
     };
 
+    enum class LOCAL_SEARCH {
+        FIRST_IMPROVEMENT,          ///< First_Improvement
+        BEST_IMPROVEMENT,           ///< Best_Improvement
+        RANDOM_IMPROVEMENT,         ///< Random_Improvement
+        NONE                        ///< None_Improvement
+    };
+
     /**
      * @brief Constructs the Algorithm solver.
      * @param maxTime A timeout in seconds for the `run` method to prevent excessive execution time.
@@ -80,6 +87,8 @@ public:
      * @return A human-readable std::string representing the algorithm's name, useful for logging.
      */
     std::string toString(ALGORITHM_TYPE algorithm) const;
+
+    std::string toString(LOCAL_SEARCH localSearch) const;
 
 private:
     /**
@@ -142,24 +151,23 @@ private:
                    const std::vector<Dependency*>& dependencies);
 
     /**
-     * @brief Creates a new vector of packages sorted by benefit in descending order.
-     * @param packages The original list of packages to sort.
-     */
-    Bag* vndBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages);
-
-    /**
-     * @brief Implements the Variable Neighborhood Search (VNS) metaheuristic to improve an initial solution.
-     * @details VNS explores different neighborhood structures to escape local optima. It starts with an
-     * initial solution and iteratively applies a `shake` function to perturb the solution and a
-     * `localSearch` function to find a new local optimum.
+     * @brief Implements the Variable Neighborhood Descent (VND) metaheuristic to improve a solution.
+     * @details VND is a local search method that systematically explores a set of predefined
+     * neighborhood structures. It starts with an initial solution and searches for improvements
+     * in the first neighborhood. If an improvement is found, the search restarts from that
+     * new solution in the first neighborhood. If not, it moves to the next neighborhood
+     * structure. This continues until all neighborhoods have been explored without finding
+     * an improvement.
      *
      * @param bagSize The maximum capacity of the bag.
      * @param initialBag A pointer to the initial `Bag` solution to be improved.
      * @param allPackages A complete list of all available packages for generating neighbors.
-     * @return A pointer to a new `Bag` object representing the best solution found by VNS.
+     * @return A pointer to a new `Bag` object representing the best solution found by VND.
      */
-    Bag* vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages);
-    
+    Bag* vndBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages);
+
+    Bag* vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages, LOCAL_SEARCH localSearchMethod);
+
     /**
      * @brief Perturbs the current solution to escape local optima by performing a series of random swaps.
      * @details This function is a key component of the VNS algorithm. It generates a neighboring solution
@@ -174,18 +182,7 @@ private:
      */
     Bag* shake(const Bag& currentBag, int k, const std::vector<Package*>& allPackages, int bagSize);
 
-    /**
-     * @brief Improves a solution by exploring its neighborhood.
-     * @details This function is part of the VNS algorithm. It systematically explores the neighborhood
-     * of the `currentBag` solution, looking for a better one. If a better solution is found,
-     * the `currentBag` is updated to this new, improved solution.
-     *
-     * @param currentBag A reference to the `Bag` solution to be improved. This object may be modified.
-     * @param bagSize The maximum capacity of the bag.
-     * @param allPackages A complete list of all available packages for generating neighbors.
-     * @return `true` if a better solution was found and `currentBag` was improved, `false` otherwise.
-     */
-    bool localSearch(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages);
+    bool localSearch(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages, LOCAL_SEARCH localSearchMethod);
 
     /**
      * @brief Systematically explores the swap neighborhood of a solution to find an improvement.
@@ -198,7 +195,33 @@ private:
      * @param allPackages A complete list of all available packages.
      * @return `true` if an improved solution was found and applied, `false` otherwise.
      */
-    bool exploreSwapNeighborhood(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages);
+    bool exploreSwapNeighborhoodFirstImprovement(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages);
+
+    /**
+     * @brief Systematically explores the swap neighborhood and applies the best found improvement.
+     * @details This function evaluates all possible valid swaps of one package from inside the bag
+     * with one package from outside. It then applies the swap that results in the greatest
+     * increase in total benefit.
+     *
+     * @param currentBag A reference to the `Bag` solution to be improved.
+     * @param bagSize The maximum capacity of the bag.
+     * @param allPackages A complete list of all available packages.
+     * @return `true` if an improved solution was found and applied, `false` otherwise.
+     */
+    bool exploreSwapNeighborhoodBestImprovement(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages);
+
+    /**
+     * @brief Explores the swap neighborhood and applies a randomly selected improvement.
+     * @details This function identifies all possible valid swaps that would improve the solution's
+     * total benefit. From this list of improvements, it randomly selects one to apply,
+     * introducing a non-deterministic element to the local search.
+     *
+     * @param currentBag A reference to the `Bag` solution to be improved.
+     * @param bagSize The maximum capacity of the bag.
+     * @param allPackages A complete list of all available packages.
+     * @return `true` if an improved solution was found and applied, `false` otherwise.
+     */
+    bool exploreSwapNeighborhoodRandomImprovement(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages);
 
     /**
      * @brief Implements the family of greedy selection algorithms.

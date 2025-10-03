@@ -42,7 +42,9 @@ std::vector<Bag*> Algorithm::run(ALGORITHM_TYPE algorithm,int bagSize,
     }
 
     resultBag.push_back(vndBag(bagSize, bestGreedyBag, packages));
-    resultBag.push_back(vnsBag(bagSize, bestGreedyBag, packages));
+    resultBag.push_back(vnsBag(bagSize, bestGreedyBag, packages, LOCAL_SEARCH::FIRST_IMPROVEMENT));
+    resultBag.push_back(vnsBag(bagSize, bestGreedyBag, packages, LOCAL_SEARCH::BEST_IMPROVEMENT));
+    resultBag.push_back(vnsBag(bagSize, bestGreedyBag, packages, LOCAL_SEARCH::RANDOM_IMPROVEMENT));
     return resultBag;
 }
 
@@ -68,6 +70,21 @@ std::string Algorithm::toString(ALGORITHM_TYPE algorithm) const {
             return "VNS";
         default:
             return "NONE";
+    }
+}
+
+std::string Algorithm::toString(LOCAL_SEARCH localSearch) const
+{
+    switch (localSearch)
+    {
+    case LOCAL_SEARCH::FIRST_IMPROVEMENT:
+        return "First Improvement";
+    case LOCAL_SEARCH::BEST_IMPROVEMENT:
+        return "Best Improvement";
+    case LOCAL_SEARCH::RANDOM_IMPROVEMENT:
+            return "Random Improvement";
+    default:
+        return "None";
     }
 }
 
@@ -139,9 +156,10 @@ Bag *Algorithm::vndBag(int bagSize, Bag *initialBag, const std::vector<Package *
     return bestBag;
 }
 
-Bag* Algorithm::vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages) {
+Bag* Algorithm::vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages, LOCAL_SEARCH localSearchMethod) {
     auto bestBag = new Bag(*initialBag);
     bestBag->setBagAlgorithm(ALGORITHM_TYPE::VNS);
+    bestBag->setLocalSearch(localSearchMethod);
 
     int k = 1;
     const int k_max = 5; // The maximum neighborhood size for shaking
@@ -154,7 +172,7 @@ Bag* Algorithm::vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>
         Bag* shakenBag = shake(*bestBag, k, allPackages, bagSize);
 
         // 2. Local Search: Find the local optimum from the shaken solution
-        localSearch(*shakenBag, bagSize, allPackages);
+        localSearch(*shakenBag, bagSize, allPackages, localSearchMethod);
 
         // 3. Move: If the new solution is better, update the best solution
         if (shakenBag->getBenefit() > bestBag->getBenefit()) {
@@ -210,20 +228,44 @@ Bag* Algorithm::shake(const Bag& currentBag, int k, const std::vector<Package*>&
     return newBag;
 }
 
-bool Algorithm::localSearch(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages) {
+bool Algorithm::localSearch(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages, LOCAL_SEARCH localSearchMethod) {
     bool improved = false;
     bool localOptimum = false;
-    while (!localOptimum) {
-        if (exploreSwapNeighborhood(currentBag, bagSize, allPackages)) {
-            improved = true;
-        } else {
-            localOptimum = true; // No more improvements found
+    switch (localSearchMethod)
+    {
+        case LOCAL_SEARCH::BEST_IMPROVEMENT:
+            while (!localOptimum) {
+                if (exploreSwapNeighborhoodBestImprovement(currentBag, bagSize, allPackages)) {
+                    improved = true;
+                } else {
+                    localOptimum = true;
+            }
         }
+        break;
+
+        case LOCAL_SEARCH::RANDOM_IMPROVEMENT:
+            while (!localOptimum) {
+                if (exploreSwapNeighborhoodRandomImprovement(currentBag, bagSize, allPackages)) {
+                    improved = true;
+                } else {
+                    localOptimum = true;
+            }
+        }
+        break;
+    
+        default:
+            while (!localOptimum) {
+                if (exploreSwapNeighborhoodFirstImprovement(currentBag, bagSize, allPackages)) {
+                    improved = true;
+                } else {
+                    localOptimum = true;
+                }
+            }
     }
     return improved;
 }
 
-bool Algorithm::exploreSwapNeighborhood(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages) {
+bool Algorithm::exploreSwapNeighborhoodFirstImprovement(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages) {
     const auto& packagesInBag = currentBag.getPackages();
     std::vector<Package*> packagesOutsideBag;
     for (Package* p : allPackages) {
@@ -253,6 +295,98 @@ bool Algorithm::exploreSwapNeighborhood(Bag& currentBag, int bagSize, const std:
         }
     }
     return false; // No improvement found
+}
+
+bool Algorithm::exploreSwapNeighborhoodBestImprovement(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages) {
+    Bag bestNeighborBag = currentBag;
+    bool improvementFound = false;
+
+    const auto& packagesInBag = currentBag.getPackages();
+    std::vector<Package*> packagesOutsideBag;
+
+    // Popula a lista de pacotes que não estão na mochila
+    for (Package* p : allPackages) {
+        bool inBag = false;
+        for (const Package* pInBag : packagesInBag) {
+            if (p->getName() == pInBag->getName()) {
+                inBag = true;
+                break;
+            }
+        }
+        if (!inBag) {
+            packagesOutsideBag.push_back(p);
+        }
+    }
+
+    // Itera por todas as trocas possíveis
+    for (const Package* packageIn : packagesInBag) {
+        for (Package* packageOut : packagesOutsideBag) {
+            Bag tempBag = currentBag;
+            tempBag.removePackage(*packageIn);
+
+            if (tempBag.canAddPackage(*packageOut, bagSize)) {
+                tempBag.addPackage(*packageOut);
+                // Se o benefício deste vizinho é o melhor até agora
+                if (tempBag.getBenefit() > bestNeighborBag.getBenefit()) {
+                    bestNeighborBag = tempBag;
+                    improvementFound = true;
+                }
+            }
+        }
+    }
+
+    // Se uma melhoria foi encontrada, atualiza a mochila atual para a melhor vizinha
+    if (improvementFound) {
+        currentBag = bestNeighborBag;
+    }
+
+    return improvementFound;
+}
+
+bool Algorithm::exploreSwapNeighborhoodRandomImprovement(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages) {
+    std::vector<Bag> improvingNeighbors;
+
+    const auto& packagesInBag = currentBag.getPackages();
+    std::vector<Package*> packagesOutsideBag;
+    // Popula a lista de pacotes que não estão na mochila
+    for (Package* p : allPackages) {
+        bool inBag = false;
+        for (const Package* pInBag : packagesInBag) {
+            if (p->getName() == pInBag->getName()) {
+                inBag = true;
+                break;
+            }
+        }
+        if (!inBag) {
+            packagesOutsideBag.push_back(p);
+        }
+    }
+
+    // Itera por todas as trocas possíveis
+    for (const Package* packageIn : packagesInBag) {
+        for (Package* packageOut : packagesOutsideBag) {
+            Bag tempBag = currentBag;
+            tempBag.removePackage(*packageIn);
+
+            if (tempBag.canAddPackage(*packageOut, bagSize)) {
+                tempBag.addPackage(*packageOut);
+                // Se a troca melhora a solução, adiciona à lista de candidatos
+                if (tempBag.getBenefit() > currentBag.getBenefit()) {
+                    improvingNeighbors.push_back(tempBag);
+                }
+            }
+        }
+    }
+
+    // Se encontramos vizinhos que melhoram a solução
+    if (!improvingNeighbors.empty()) {
+        // Escolhe um dos vizinhos aleatoriamente
+        int randomIndex = randomNumberInt(0, improvingNeighbors.size() - 1);
+        currentBag = improvingNeighbors[randomIndex];
+        return true;
+    }
+
+    return false; // Nenhuma melhoria encontrada
 }
 
 std::vector<Bag*> Algorithm::greedyBag(int bagSize, const std::vector<Package*>& packages,

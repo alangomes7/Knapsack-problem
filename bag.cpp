@@ -10,7 +10,8 @@ Bag::Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp)
     : m_bagAlgorithm(bagAlgorithm),
       m_timeStamp(timestamp),
       m_size(0),
-      m_algorithmTimeSeconds(0.0) {
+      m_algorithmTimeSeconds(0.0),
+      m_localSearch(Algorithm::LOCAL_SEARCH::NONE) {
     // This constructor creates a new, empty bag, ready to be filled by an algorithm.
     // The size is initialized to zero.
 }
@@ -53,6 +54,11 @@ Algorithm::ALGORITHM_TYPE Bag::getBagAlgorithm() const {
     return m_bagAlgorithm;
 }
 
+Algorithm::LOCAL_SEARCH Bag::getBagLocalSearch() const
+{
+    return m_localSearch;
+}
+
 double Bag::getAlgorithmTime() const {
     return m_algorithmTimeSeconds;
 }
@@ -64,6 +70,11 @@ std::string Bag::getTimestamp() const
 
 void Bag::setAlgorithmTime(double seconds) {
     m_algorithmTimeSeconds = seconds;
+}
+
+void Bag::setLocalSearch(Algorithm::LOCAL_SEARCH localSearch)
+{
+    m_localSearch = localSearch;
 }
 
 void Bag::setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm)
@@ -152,7 +163,7 @@ std::string Bag::toString() const {
     Algorithm algoHelper(0);
     std::string bagString;
 
-    bagString += "Algorithm: " + algoHelper.toString(m_bagAlgorithm) + "\n";
+    bagString += "Algorithm: " + algoHelper.toString(m_bagAlgorithm) + " | " + algoHelper.toString(m_localSearch) + "\n";
     bagString += "Bag size: " + std::to_string(m_size) + "\n";
     bagString += "Execution Time: " + std::to_string(m_algorithmTimeSeconds) + "s\n";
     bagString += "Packages: " + std::to_string(m_baggedPackages.size()) + "\n - - - \n";

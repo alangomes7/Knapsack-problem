@@ -1,6 +1,6 @@
 #include "knapsackwindow.h"
 #include "./ui_knapsackwindow.h"
-#include "fileprocessor.h" // Assuming this helper class is available for file parsing
+#include "fileprocessor.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -25,23 +25,15 @@ KnapsackWindow::KnapsackWindow(QWidget *parent)
 
 KnapsackWindow::~KnapsackWindow() {
     // Clean up all dynamically allocated objects to prevent memory leaks.
-    // The window "owns" all Package, Dependency, and Bag objects.
-
-    // Delete all Bag objects
     for (Bag* bag : m_bags) {
         delete bag;
     }
-
-    // Delete all Package objects stored in the map
     for (auto const& [key, val] : m_availablePackages) {
         delete val;
     }
-
-    // Delete all Dependency objects stored in the map
     for (auto const& [key, val] : m_availableDependencies) {
         delete val;
     }
-
     delete ui;
 }
 
@@ -51,21 +43,19 @@ void KnapsackWindow::initializeUiElements()
     ui->plainTextEdit_logs->setReadOnly(true);
     ui->comboBox_algorithm->addItem("Select Algorithm");
     ui->label_bagCapacityNumber->setText(QString::number(m_bagSize) + " MB");
-    int executionTime = 3;
+    int executionTime = 5;
     for(int i = 1; i <= 3; i++) {
         ui->comboBox_executionTime->addItem(QString::number(executionTime * i) + " s");
     }
 }
 
 void KnapsackWindow::setupConnections() {
-    // Connect signals from UI elements to the appropriate slots using the new naming convention.
     connect(ui->pushButton_filePath, &QPushButton::clicked, this, &KnapsackWindow::onFilePathButtonClicked);
     connect(ui->pushButton_run, &QPushButton::clicked, this, &KnapsackWindow::onRunButtonClicked);
     connect(ui->comboBox_algorithm, &QComboBox::currentTextChanged, this, &KnapsackWindow::onAlgorithmChanged);
 }
 
 void KnapsackWindow::onFilePathButtonClicked() {
-    // Open a file dialog to let the user select the input file.
     QString filter = "Knapsack Files (*.knapsack.txt)";
     m_filePath = QFileDialog::getOpenFileName(this, "Open Knapsack File", "./../../input", filter);
 
@@ -73,7 +63,6 @@ void KnapsackWindow::onFilePathButtonClicked() {
         return;
     }
 
-    // Basic file validation
     QFile file(m_filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         QMessageBox::critical(this, "Error", "Could not open file. Please check permissions.");
@@ -87,14 +76,11 @@ void KnapsackWindow::onFilePathButtonClicked() {
 }
 
 void KnapsackWindow::onRunButtonClicked() {
-    // Clear any previous results before running the algorithms.
     for (Bag* bag : m_bags) {
         delete bag;
     }
     m_bags.clear();
 
-    // The algorithm's run() method expects vectors of pointers, not maps.
-    // We must extract the pointers from our maps into temporary vectors.
     std::vector<Package*> packagesVec;
     packagesVec.reserve(m_availablePackages.size());
     for(auto const& [key, val] : m_availablePackages) {
@@ -109,29 +95,37 @@ void KnapsackWindow::onRunButtonClicked() {
 
     std::string timeStamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss").toStdString();
     int executionTime = (ui->comboBox_executionTime->currentText().remove("s")).toInt();
-    // Run each algorithm and store the resulting bag.
+
     m_algorithm = new Algorithm(executionTime);
     m_bags = m_algorithm->run(Algorithm::ALGORITHM_TYPE::RANDOM, m_bagSize, packagesVec, dependenciesVec, timeStamp);
 
-    // Populate the dropdown so the user can view the results of each run.
+    // Clear and populate ComboBox with normalized labels
     ui->comboBox_algorithm->clear();
-    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::RANDOM)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::GREEDY_Package_Benefit)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::GREEDY_Package_Size)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::GREEDY_Package_Benefit_Ratio)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit_Ratio)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Size)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::VND)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(m_algorithm->toString(Algorithm::ALGORITHM_TYPE::VNS)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::RANDOM)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::GREEDY_Package_Benefit)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::GREEDY_Package_Size)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::GREEDY_Package_Benefit_Ratio)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit_Ratio)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Size)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VND)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::FIRST_IMPROVEMENT)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT)));
 
-    // Saving the algorithm execution results
     saveData();
 }
 
 void KnapsackWindow::onAlgorithmChanged() {
-    // When the user selects a different algorithm result, update the display.
     printBag(ui->comboBox_algorithm->currentText().toStdString());
+}
+
+std::string KnapsackWindow::getAlgorithmLabel(Algorithm::ALGORITHM_TYPE algo, Algorithm::LOCAL_SEARCH ls) {
+    std::string label = m_algorithm->toString(algo);
+    if (ls != Algorithm::LOCAL_SEARCH::NONE) {
+        label += " | " + m_algorithm->toString(ls);
+    }
+    return label;
 }
 
 void KnapsackWindow::saveData()
@@ -141,29 +135,27 @@ void KnapsackWindow::saveData()
     QFile inputFile(m_filePath);
     QFileInfo inputInfo(inputFile);
 
-    // Fix timestamp format: replace ":" with "-" for valid filenames
     const QString csvFile = inputInfo.absolutePath() + "/results_" + "knapsackResults.csv";
 
     QFile file(csvFile);
-
-    // Open file in append mode (creates if not exists)
     if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         qWarning() << "Error: Could not create or open" << csvFile;
         return;
     }
 
     QTextStream out(&file);
-
-    // If file is empty, write header
     if (file.size() == 0) {
         out << "Algoritmo,File name,Timestamp,Tempo de Processamento (s),Pacotes,Depenências,Peso da mochila,Benefício mochila\n";
     }
-
+    int bagNumber = static_cast<int>(m_bags.size());
+    int i = 0;
     for (const Bag *bagData : m_bags) {
         if (!bagData) continue;
 
         Algorithm algorithmHelper(0);
-        QString algoritmo     = QString::fromStdString(algorithmHelper.toString(bagData->getBagAlgorithm()));
+        QString algoritmo = QString::fromStdString(
+            getAlgorithmLabel(bagData->getBagAlgorithm(), bagData->getBagLocalSearch())
+        );
         QString fileName      = QFileInfo(m_filePath).fileName();
         QString timestamp     = QString::fromStdString(bagData->getTimestamp());
         double processingTime = bagData->getAlgorithmTime();
@@ -172,7 +164,6 @@ void KnapsackWindow::saveData()
         int bagWeight         = bagData->getSize();
         int bagBenefit        = bagData->getBenefit();
 
-        // Write row
         out << algoritmo << ","
             << fileName << ","
             << timestamp << ","
@@ -180,7 +171,11 @@ void KnapsackWindow::saveData()
             << packages << ","
             << dependencies << ","
             << bagWeight << ","
-            << bagBenefit << "\n";
+            << bagBenefit;
+        if (i < bagNumber){
+            out << "\n";
+        }
+        i++;
     }
 
     file.close();
@@ -188,7 +183,6 @@ void KnapsackWindow::saveData()
 }
 
 void KnapsackWindow::loadFile() {
-    // This method is now responsible for populating the unordered_maps.
     FileProcessor fileProcessor(m_filePath, this);
     const auto& processedData = fileProcessor.getProcessedData();
 
@@ -197,7 +191,6 @@ void KnapsackWindow::loadFile() {
         return;
     }
 
-    // Clean up old data before loading new data.
     for (auto const& [key, val] : m_availablePackages) { delete val; }
     m_availablePackages.clear();
     for (auto const& [key, val] : m_availableDependencies) { delete val; }
@@ -207,21 +200,18 @@ void KnapsackWindow::loadFile() {
     const auto& packagesData = processedData.at(1);
     const auto& dependenciesData = processedData.at(2);
 
-    // Load dependencies into the map. The key is their name (generated from index).
     for (int i = 0; i < dependenciesData.size(); ++i) {
         std::string depName = std::to_string(i);
         int size = dependenciesData.at(i).toInt();
         m_availableDependencies[depName] = new Dependency(depName, size);
     }
 
-    // Load packages into the map. The key is their name.
     for (int i = 0; i < packagesData.size(); ++i) {
         std::string pkgName = std::to_string(i);
         int benefit = packagesData.at(i).toInt();
         m_availablePackages[pkgName] = new Package(pkgName, benefit);
     }
 
-    // Load relations (package → dependency), looking up items by name in the maps.
     for (size_t i = 3; i < processedData.size(); ++i) {
         const auto& line = processedData.at(i);
         if (line.size() != 2) continue;
@@ -229,20 +219,17 @@ void KnapsackWindow::loadFile() {
         std::string pkgName = line.at(0).toStdString();
         std::string depName = line.at(1).toStdString();
 
-        // Find the package and dependency in our maps.
         auto pkgIt = m_availablePackages.find(pkgName);
         auto depIt = m_availableDependencies.find(depName);
 
         if (pkgIt != m_availablePackages.end() && depIt != m_availableDependencies.end()) {
             Package* package = pkgIt->second;
             Dependency* dependency = depIt->second;
-            // Link them together.
             package->addDependency(*dependency);
             dependency->addAssociatedPackage(package);
         }
     }
 
-    // Update UI labels.
     ui->plainTextEdit_logs->clear();
     ui->label_SoftwarePackagesFileNumber->setText(QString::number(m_availablePackages.size()));
     ui->label_SoftwareDepenciesFileNumber->setText(QString::number(m_availableDependencies.size()));
@@ -253,7 +240,6 @@ void KnapsackWindow::loadFile() {
 
 void KnapsackWindow::printPackages() {
     QString log_text = "List of all available packages:\n- - -\n";
-    // Iterate over the map to display package info.
     for (const auto& pair : m_availablePackages) {
         const Package* package = pair.second;
         log_text.append(QString::fromStdString(package->toString()) + "\n- - -\n");
@@ -263,13 +249,11 @@ void KnapsackWindow::printPackages() {
 
 void KnapsackWindow::printDependencies() {
     QString log_text = "List of all available dependencies:\n- - -\n";
-    // Iterate over the map to display dependency info.
     for (const auto& pair : m_availableDependencies) {
         const Dependency* dependency = pair.second;
         log_text.append("Dependency: " + QString::fromStdString(dependency->getName()) + "\n");
         log_text.append("Size: " + QString::number(dependency->getSize()) + " MB\n");
 
-        // Display associated packages (now stored in a map in the Dependency class).
         const auto& associatedPackages = dependency->getAssociatedPackages();
         if (!associatedPackages.empty()) {
             log_text.append("Associated Packages:\n");
@@ -280,29 +264,31 @@ void KnapsackWindow::printDependencies() {
         }
         log_text.append("\n- - -\n");
     }
-    ui->plainTextEdit_logs->setPlainText(log_text); // Append to see both packages and dependencies.
+    ui->plainTextEdit_logs->setPlainText(log_text);
 }
 
 void KnapsackWindow::printBag(const std::string& algorithmName) {
     if (m_bags.empty()) return;
 
     const Bag* bagToPrint = nullptr;
-    // Find the correct bag from the results vector.
+
     for (const Bag* selectedBag : m_bags) {
-        if (m_algorithm->toString(selectedBag->getBagAlgorithm()) == algorithmName) {
+        std::string currentBagAlgorithmName = getAlgorithmLabel(
+            selectedBag->getBagAlgorithm(),
+            selectedBag->getBagLocalSearch()
+        );
+        if (currentBagAlgorithmName == algorithmName) {
             bagToPrint = selectedBag;
-            break; // Found the matching bag, no need to search further.
+            break;
         }
     }
 
-    if (!bagToPrint) return; // Should not happen if UI is synced with results.
+    if (!bagToPrint) return;
 
-    // Clear the log and print the details of the selected bag.
     ui->plainTextEdit_logs->clear();
     QString log_text = QString::fromStdString(bagToPrint->toString());
     ui->plainTextEdit_logs->setPlainText(log_text);
 
-    // Update the UI labels with the stats from the selected bag.
     ui->label_PackedSoftwarePackagesNumber->setText(QString::number(bagToPrint->getPackages().size()));
     ui->label_PackedSoftwareDependenciesNumber->setText(QString::number(bagToPrint->getDependencies().size()));
     ui->label_bagCapacityNumber->setText(QString::number(bagToPrint->getSize()) + " MB");

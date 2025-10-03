@@ -59,6 +59,9 @@ private slots:
      */
     void onAlgorithmChanged();
 
+    std::string getAlgorithmLabel(Algorithm::ALGORITHM_TYPE algo,
+                              Algorithm::LOCAL_SEARCH ls = Algorithm::LOCAL_SEARCH::NONE);
+
 private:
     /**
      * @brief Sets up initial states and default values for UI elements.

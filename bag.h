@@ -64,6 +64,8 @@ public:
      */
     Algorithm::ALGORITHM_TYPE getBagAlgorithm() const;
 
+    Algorithm::LOCAL_SEARCH getBagLocalSearch() const;
+
     /**
      * @brief Gets the execution time of the algorithm that filled the bag.
      * @return The time in seconds as a double.
@@ -81,6 +83,8 @@ public:
      * @param seconds The execution time in seconds.
      */
     void setAlgorithmTime(double seconds);
+
+    void setLocalSearch(Algorithm::LOCAL_SEARCH localSearch);
 
     /**
      * @brief Sets the algorithm type for the bag.
@@ -129,6 +133,7 @@ private:
     void addDependencies(const std::unordered_map<std::string, Dependency*>& dependencies);
 
     Algorithm::ALGORITHM_TYPE m_bagAlgorithm;
+    Algorithm::LOCAL_SEARCH m_localSearch;
     std::string m_timeStamp = "0000-00-00 00:00:00";
     int m_size;
     double m_algorithmTimeSeconds;
