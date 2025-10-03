@@ -29,11 +29,11 @@ Bag::Bag(const std::vector<Package*>& packages)
     }
 }
 
-const std::vector<const Package*>& Bag::getPackages() const {
+const std::unordered_set<const Package*>& Bag::getPackages() const {
     return m_baggedPackages;
 }
 
-const std::vector<const Dependency*>& Bag::getDependencies() const {
+const std::unordered_set<const Dependency*>& Bag::getDependencies() const {
     return m_baggedDependencies;
 }
 
@@ -44,7 +44,7 @@ int Bag::getSize() const {
 
 int Bag::getBenefit() const {
     int benefit = 0;
-    for(const Package * package : m_baggedPackages){
+    for (const Package* package : m_baggedPackages) {
         benefit += package->getBenefit();
     }
     return benefit;
@@ -54,8 +54,7 @@ Algorithm::ALGORITHM_TYPE Bag::getBagAlgorithm() const {
     return m_bagAlgorithm;
 }
 
-Algorithm::LOCAL_SEARCH Bag::getBagLocalSearch() const
-{
+Algorithm::LOCAL_SEARCH Bag::getBagLocalSearch() const {
     return m_localSearch;
 }
 
@@ -63,8 +62,7 @@ double Bag::getAlgorithmTime() const {
     return m_algorithmTimeSeconds;
 }
 
-std::string Bag::getTimestamp() const
-{
+std::string Bag::getTimestamp() const {
     return m_timeStamp;
 }
 
@@ -72,27 +70,24 @@ void Bag::setAlgorithmTime(double seconds) {
     m_algorithmTimeSeconds = seconds;
 }
 
-void Bag::setLocalSearch(Algorithm::LOCAL_SEARCH localSearch)
-{
+void Bag::setLocalSearch(Algorithm::LOCAL_SEARCH localSearch) {
     m_localSearch = localSearch;
 }
 
-void Bag::setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm)
-{
+void Bag::setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm) {
     m_bagAlgorithm = bagAlgorithm;
 }
 
 bool Bag::addPackage(const Package& package) {
-    // Use std::find to check if a pointer to this package already exists in our vector.
-    auto it = std::find(m_baggedPackages.begin(), m_baggedPackages.end(), &package);
-    if (it != m_baggedPackages.end()) {
-        // The package is already in the bag, so we can't add it again.
+    // FIX: Use the insert() method for std::unordered_set.
+    // It returns a pair, where .second is a bool that is true if insertion
+    // took place (i.e., the element was not already present).
+    auto result = m_baggedPackages.insert(&package);
+
+    if (!result.second) {
+        // The package was already in the bag.
         return false;
     }
-
-    // Add the package pointer to our list.
-    m_baggedPackages.push_back(&package);
-    //m_size = - package.getBenefit();
 
     // Add its dependencies. The helper function handles duplicates and updates the bag's total size.
     addDependencies(package.getDependencies());
@@ -100,17 +95,15 @@ bool Bag::addPackage(const Package& package) {
 }
 
 void Bag::removePackage(const Package& package) {
-    // Find the iterator pointing to the package we want to remove.
-    auto it = std::find(m_baggedPackages.begin(), m_baggedPackages.end(), &package);
-    if (it == m_baggedPackages.end()) {
-        // If the package isn't in the bag, there's nothing to do.
+    // FIX: Use erase(key) for std::unordered_set, which is more direct and efficient.
+    // It returns the number of elements erased (0 or 1 for a set).
+    if (m_baggedPackages.erase(&package) == 0) {
+        // If the package wasn't in the bag, there's nothing to do.
         return;
     }
-    // Erase the package from the vector.
-    m_baggedPackages.erase(it);
 
-    // Now, we must check if any dependencies are no longer needed by any of the REMAINING packages.
-    // 1. Create a set of all dependencies that are still required. A set provides fast lookups.
+    // Now, we must check if any dependencies are no longer needed.
+    // 1. Create a set of all dependencies that are still required by the REMAINING packages.
     std::unordered_set<const Dependency*> stillNeededDependencies;
     for (const auto* pkg : m_baggedPackages) {
         for (const auto& pair : pkg->getDependencies()) {
@@ -118,37 +111,28 @@ void Bag::removePackage(const Package& package) {
         }
     }
 
-    // 2. Remove dependencies that are no longer in the "still needed" set.
-    // We use the efficient remove-erase idiom to modify the vector.
-    auto& deps = m_baggedDependencies;
-    deps.erase(
-        std::remove_if(deps.begin(), deps.end(),
-            [&](const Dependency* dep) {
-                // Check if this dependency is in our set of needed dependencies.
-                if (stillNeededDependencies.find(dep) == stillNeededDependencies.end()) {
-                    // It's NOT needed anymore. Decrement the bag size and mark it for removal.
-                    m_size -= dep->getSize();
-                    return true; // `remove_if` will move this element to the end for erasing.
-                }
-                return false; // This dependency is still needed, so don't remove it.
-            }),
-        deps.end()
-    );
+    // FIX: The remove-erase idiom is ONLY for sequence containers (like vector).
+    // For an unordered_set, we must iterate and erase, or simply rebuild it.
+    // Rebuilding is often cleaner and avoids iterator invalidation issues.
+    m_baggedDependencies.clear();
+    m_size = 0;
+    for (const Dependency* dep : stillNeededDependencies) {
+        m_baggedDependencies.insert(dep);
+        m_size += dep->getSize();
+    }
 }
 
 bool Bag::canAddPackage(const Package& package, int maxCapacity) const {
-    // This is an efficient, predictive check that doesn't create a temporary bag.
     int potentialSizeIncrease = 0;
 
     // Iterate through the dependencies of the package we're considering.
     for (const auto& pair : package.getDependencies()) {
         const Dependency* dependency = pair.second;
 
-        // Check if this dependency is ALREADY in our bag.
-        auto it = std::find(m_baggedDependencies.begin(), m_baggedDependencies.end(), dependency);
-        if (it == m_baggedDependencies.end()) {
-            // If it's not already present, adding this package would also add this dependency,
-            // thus increasing the bag's total size.
+        // FIX: Use the efficient .count() method for std::unordered_set instead of std::find.
+        // .count() returns 1 if the element exists, 0 otherwise.
+        if (m_baggedDependencies.count(dependency) == 0) {
+            // If it's not already present, adding this package would also add this dependency.
             potentialSizeIncrease += dependency->getSize();
         }
     }
@@ -158,7 +142,6 @@ bool Bag::canAddPackage(const Package& package, int maxCapacity) const {
 }
 
 std::string Bag::toString() const {
-    // To convert the algorithm enum to a string, we need an Algorithm instance.
     // Creating a temporary instance is a simple way to access its `toString` method.
     Algorithm algoHelper(0);
     std::string bagString;
@@ -186,11 +169,10 @@ void Bag::addDependencies(const std::unordered_map<std::string, Dependency*>& de
         const Dependency* dependency = pair.second;
         if (!dependency) continue; // Safety check
 
-        // Check if the dependency is already accounted for in our bag.
-        auto it = std::find(m_baggedDependencies.begin(), m_baggedDependencies.end(), dependency);
-        if (it == m_baggedDependencies.end()) {
-            // If it's a new dependency, add it to our list and increase the total bag size.
-            m_baggedDependencies.push_back(dependency);
+        // FIX: Use the insert() method. Its return value tells us if the element was new.
+        auto result = m_baggedDependencies.insert(dependency);
+        if (result.second) {
+            // If .second is true, the dependency was new, so we add its size to the total.
             m_size += dependency->getSize();
         }
     }

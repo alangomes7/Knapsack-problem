@@ -10,6 +10,7 @@ class Bag;
 class Package;
 class Dependency;
 enum class ALGORITHM_TYPE;
+enum class LOCAL_SEARCH;
 
 /**
  * @brief Provides a collection of algorithms to solve the package dependency knapsack problem.
@@ -43,15 +44,20 @@ public:
         RANDOM_GREEDY_Package_Benefit,              ///< Hybrid: Randomly selects from a top-candidate pool sorted by benefit.
         RANDOM_GREEDY_Package_Benefit_Ratio,        ///< Hybrid: Randomly selects from a top-candidate pool sorted by benefit-to-size ratio.
         RANDOM_GREEDY_Package_Size,                 ///< Hybrid: Randomly selects from a top-candidate pool sorted by smallest size.
-        VND,                                        ///< VND
-        VNS                                         ///< VNS
+        VND,                                        ///< Variable Neighborhood Descent metaheuristic.
+        VNS                                         ///< Variable Neighborhood Search metaheuristic.
     };
 
+    /**
+     * @brief Defines the strategies for the local search phase within metaheuristics.
+     * @details This enumeration specifies how the neighborhood of a solution is explored
+     * to find an improvement.
+     */
     enum class LOCAL_SEARCH {
-        FIRST_IMPROVEMENT,          ///< First_Improvement
-        BEST_IMPROVEMENT,           ///< Best_Improvement
-        RANDOM_IMPROVEMENT,         ///< Random_Improvement
-        NONE                        ///< None_Improvement
+        FIRST_IMPROVEMENT,                          ///< Applies the first improvement found while exploring the neighborhood.
+        BEST_IMPROVEMENT,                           ///< Explores the entire neighborhood and applies the best improvement found.
+        RANDOM_IMPROVEMENT,                         ///< Finds all possible improvements and applies one at random.
+        NONE                                        ///< No local search is performed.
     };
 
     /**
@@ -87,7 +93,12 @@ public:
      * @return A human-readable std::string representing the algorithm's name, useful for logging.
      */
     std::string toString(ALGORITHM_TYPE algorithm) const;
-
+    
+    /**
+     * @brief Converts a LOCAL_SEARCH enum value to its string representation.
+     * @param localSearch The enum value to convert.
+     * @return A human-readable std::string representing the local search strategy's name.
+     */
     std::string toString(LOCAL_SEARCH localSearch) const;
 
 private:
@@ -166,6 +177,21 @@ private:
      */
     Bag* vndBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages);
 
+    /**
+     * @brief Implements the Variable Neighborhood Search (VNS) metaheuristic to improve a solution.
+     * @details VNS is designed to escape local optima by systematically changing neighborhood
+     * structures during the search. It works by repeatedly executing three steps:
+     * 1. Shaking: Perturb the current solution to jump to a random neighbor in the k-th neighborhood.
+     * 2. Local Search: Apply a local search method to find a new local optimum from the perturbed solution.
+     * 3. Move: If the new optimum is better, move to it. Otherwise, stay at the current solution.
+     * The neighborhood distance `k` is increased if no improvement is found.
+     *
+     * @param bagSize The maximum capacity of the bag.
+     * @param initialBag A pointer to the initial `Bag` solution to improve.
+     * @param allPackages A complete list of all available packages.
+     * @param localSearchMethod The local search strategy (e.g., BEST_IMPROVEMENT) to apply after shaking.
+     * @return A pointer to a new `Bag` object representing the best solution found by VNS.
+     */
     Bag* vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages, LOCAL_SEARCH localSearchMethod);
 
     /**
@@ -181,7 +207,20 @@ private:
      * @return A new `Bag` object representing the perturbed solution.
      */
     Bag* shake(const Bag& currentBag, int k, const std::vector<Package*>& allPackages, int bagSize);
-
+    
+    /**
+     * @brief Applies a local search heuristic to improve a given solution.
+     * @details This function acts as a dispatcher, calling the appropriate neighborhood
+     * exploration method (e.g., First Improvement, Best Improvement) based on the
+     * `localSearchMethod` parameter. It modifies the `currentBag` in place if
+     * an improvement is found.
+     *
+     * @param currentBag The bag solution to be improved, passed by reference.
+     * @param bagSize The maximum capacity of the bag.
+     * @param allPackages A complete list of all packages available for swaps.
+     * @param localSearchMethod The specific local search strategy to apply.
+     * @return `true` if the solution was improved, `false` otherwise.
+     */
     bool localSearch(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages, LOCAL_SEARCH localSearchMethod);
 
     /**
@@ -242,7 +281,19 @@ private:
      * @return A vector containing three `Bag` objects, one for each random-greedy heuristic.
      */
     std::vector<Bag*> randomGreedy(int bagSize, const std::vector<Package*>& packages,
-                                  const std::vector<Dependency*>& dependencies);
+                                   const std::vector<Dependency*>& dependencies);
+
+    /**
+     * @brief Iteratively removes packages from a bag until its size is within a specified maximum.
+     * @details This function implements a greedy repair strategy. In a loop, it identifies the
+     * package with the worst benefit-to-size ratio and removes it. This process is
+     * repeated until the bag's total size is less than or equal to the maxCapacity.
+     * This is useful for ensuring solutions generated by methods like 'shake' remain valid.
+     * @param bag The Bag object to modify, passed by reference.
+     * @param maxCapacity The target maximum size for the bag.
+     * @return true if the bag was successfully brought within the size limit, false otherwise.
+     */
+    bool removePackagesToFit(Bag& bag, int maxCapacity);
 
     /**
      * @brief Creates a new vector of packages sorted by benefit in descending order.
@@ -280,9 +331,9 @@ private:
      * dependencies instead of iterating through the full list every time.
      *
      * @param packages A constant reference to a vector of `Package` pointers, representing all available packages.
-     *                 This list is used to initialize the dependency graph structure.
+     * This list is used to initialize the dependency graph structure.
      * @param dependencies A constant reference to a vector of `Dependency` pointers, where each pointer
-     *                     indicates a prerequisite relationship between two packages.
+     * indicates a prerequisite relationship between two packages.
      */
     void precomputeDependencyGraph(const std::vector<Package*>& packages,
                                    const std::vector<Dependency*>& dependencies);

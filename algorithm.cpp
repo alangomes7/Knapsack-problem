@@ -4,6 +4,8 @@
 #include <chrono>
 #include <utility>
 #include <algorithm>
+#include <iterator>
+#include <limits>
 
 #include "bag.h"
 #include "package.h"
@@ -13,38 +15,39 @@ Algorithm::Algorithm(double maxTime)
     : m_maxTime(maxTime) {
 }
 
-// Executes all strattegyies
+// Executes all strategies
 std::vector<Bag*> Algorithm::run(ALGORITHM_TYPE algorithm,int bagSize,
-                    const std::vector<Package *> &packages,
-                    const std::vector<Dependency *> &dependencies,
-                    const std::string& timestamp)
+                       const std::vector<Package *> &packages,
+                       const std::vector<Dependency *> &dependencies,
+                       const std::string& timestamp)
 {
     m_timestamp = timestamp;
     std::vector<Bag*> resultBag;
     resultBag.push_back(randomBag(bagSize, packages, dependencies));
     std::vector<Bag*> bagsGreedy = greedyBag(bagSize, packages, dependencies);
     std::vector<Bag*> bagsRandomGreedy = randomGreedy(bagSize, packages, dependencies);
-    for(Bag* bagGreedy : bagsGreedy){
-        resultBag.push_back(bagGreedy);
-    }
-    for(Bag* bagRandomGreedy : bagsRandomGreedy){
-        resultBag.push_back(bagRandomGreedy);
-    }
 
-    // Find the best greedy solution to use as a starting point for VND
-    Bag* bestGreedyBag = nullptr;
-    int bestGreedyBenefit = -1;
+    resultBag.insert(resultBag.end(), bagsGreedy.begin(), bagsGreedy.end());
+    resultBag.insert(resultBag.end(), bagsRandomGreedy.begin(), bagsRandomGreedy.end());
+
+    // Find the best solution from the constructive heuristics to use as a starting point
+    Bag* bestInitialBag = nullptr;
+    int bestInitialBenefit = -1;
     for (Bag* b : resultBag) {
-        if (b->getBenefit() > bestGreedyBenefit) {
-            bestGreedyBenefit = b->getBenefit();
-            bestGreedyBag = b;
+        if (b->getBenefit() > bestInitialBenefit) {
+            bestInitialBenefit = b->getBenefit();
+            bestInitialBag = b;
         }
     }
 
-    resultBag.push_back(vndBag(bagSize, bestGreedyBag, packages));
-    resultBag.push_back(vnsBag(bagSize, bestGreedyBag, packages, LOCAL_SEARCH::FIRST_IMPROVEMENT));
-    resultBag.push_back(vnsBag(bagSize, bestGreedyBag, packages, LOCAL_SEARCH::BEST_IMPROVEMENT));
-    resultBag.push_back(vnsBag(bagSize, bestGreedyBag, packages, LOCAL_SEARCH::RANDOM_IMPROVEMENT));
+    // Run metaheuristics using the best initial solution
+    if (bestInitialBag) {
+        resultBag.push_back(vndBag(bagSize, bestInitialBag, packages));
+        resultBag.push_back(vnsBag(bagSize, bestInitialBag, packages, LOCAL_SEARCH::FIRST_IMPROVEMENT));
+        resultBag.push_back(vnsBag(bagSize, bestInitialBag, packages, LOCAL_SEARCH::BEST_IMPROVEMENT));
+        resultBag.push_back(vnsBag(bagSize, bestInitialBag, packages, LOCAL_SEARCH::RANDOM_IMPROVEMENT));
+    }
+
     return resultBag;
 }
 
@@ -94,64 +97,32 @@ std::string Algorithm::toString(LOCAL_SEARCH localSearch) const
 
 Bag* Algorithm::randomBag(int bagSize, const std::vector<Package*>& packages,
                           const std::vector<Dependency*>& dependencies) {
-    // To avoid modifying the original list of packages, we create a mutable copy.
     auto mutablePackages = packages;
-
     auto pickStrategy = [&](std::vector<Package*>& pkgs) {
         return this->pickRandomPackage(pkgs);
     };
-
     return fillBagWithStrategy(bagSize, mutablePackages, pickStrategy, ALGORITHM_TYPE::RANDOM);
 }
 
-Bag *Algorithm::vndBag(int bagSize, Bag *initialBag, const std::vector<Package *> &allPackages)
+Bag* Algorithm::vndBag(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages)
 {
     auto bestBag = new Bag(*initialBag);
     bestBag->setBagAlgorithm(ALGORITHM_TYPE::VND);
     bool improved = true;
 
-    std::chrono::duration<double> max_duration_seconds(m_maxTime);
-    auto end_time = std::chrono::high_resolution_clock::now();
-
     auto start_time = std::chrono::high_resolution_clock::now();
-    while (improved && std::chrono::high_resolution_clock::now() - start_time < max_duration_seconds) {
-        improved = false;
-        // Neighborhood 1: Swap one package from the bag with one outside
-        const auto& packagesInBag = bestBag->getPackages();
-        std::vector<Package*> packagesOutsideBag;
+    std::chrono::duration<double> max_duration_seconds(m_maxTime);
 
-        for (Package* p : allPackages) {
-            bool inBag = false;
-            for (const Package* pInBag : packagesInBag) {
-                if (p->getName() == pInBag->getName()) {
-                    inBag = true;
-                    break;
-                }
-            }
-            if (!inBag) {
-                packagesOutsideBag.push_back(p);
-            }
+    while (improved) {
+        // Stop if the time limit is exceeded
+        if (std::chrono::high_resolution_clock::now() - start_time > max_duration_seconds) {
+            break;
         }
 
-        for (const Package* packageIn : packagesInBag) {
-            for (Package* packageOut : packagesOutsideBag) {
-                Bag tempBag = *bestBag;
-                tempBag.removePackage(*packageIn);
-                if (tempBag.canAddPackage(*packageOut, bagSize)) {
-                    tempBag.addPackage(*packageOut);
-                    if (tempBag.getBenefit() > bestBag->getBenefit()) {
-                        delete bestBag;
-                        bestBag = new Bag(tempBag);
-                        improved = true;
-                        goto next_iteration; // Exit inner loops and restart with the new best bag
-                    }
-                }
-            }
-        }
-        next_iteration:;
-        end_time = std::chrono::high_resolution_clock::now();
+        improved = exploreSwapNeighborhoodBestImprovement(*bestBag, bagSize, allPackages);
     }
-
+    
+    auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     bestBag->setAlgorithmTime(elapsed_seconds.count());
     return bestBag;
@@ -165,30 +136,37 @@ Bag* Algorithm::vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>
     int k = 1;
     const int k_max = 5; // The maximum neighborhood size for shaking
 
-    std::chrono::duration<double> max_duration_seconds(m_maxTime);
-    auto end_time = std::chrono::high_resolution_clock::now();
-
     auto start_time = std::chrono::high_resolution_clock::now();
-    while (k <= k_max && std::chrono::high_resolution_clock::now() - start_time < max_duration_seconds) {
+    std::chrono::duration<double> max_duration_seconds(m_maxTime);
+
+    while (k <= k_max) {
+        // Stop if the time limit is exceeded
+        if (std::chrono::high_resolution_clock::now() - start_time > max_duration_seconds) {
+            break;
+        }
+        
         // 1. Shaking: Generate a random solution in the k-th neighborhood
-        Bag* shakenBag = shake(*bestBag, k, allPackages, bagSize);
+        int extraSize = 2000;
+        Bag* shakenBag = shake(*bestBag, k, allPackages, bagSize + extraSize);
 
         // 2. Local Search: Find the local optimum from the shaken solution
         localSearch(*shakenBag, bagSize, allPackages, localSearchMethod);
 
-        // 3. Move: If the new solution is better, update the best solution
+        // 3. Repair bag to meet the max_size requirement
+        removePackagesToFit(*shakenBag, bagSize);
+
+        // 4. Move: If the new solution is better, update the best solution
         if (shakenBag->getBenefit() > bestBag->getBenefit()) {
             delete bestBag;
             bestBag = shakenBag;
             k = 1; // Reset to the first neighborhood
-            end_time = std::chrono::high_resolution_clock::now();
         } else {
             delete shakenBag;
             k++; // Move to the next neighborhood
-            end_time = std::chrono::high_resolution_clock::now();
         }
     }
 
+    auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     bestBag->setAlgorithmTime(elapsed_seconds.count());
     return bestBag;
@@ -196,35 +174,37 @@ Bag* Algorithm::vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>
 
 Bag* Algorithm::shake(const Bag& currentBag, int k, const std::vector<Package*>& allPackages, int bagSize) {
     Bag* newBag = new Bag(currentBag);
+    const auto& packagesInBag = newBag->getPackages();
 
     // Randomly remove k packages
-    for (int i = 0; i < k && !newBag->getPackages().empty(); ++i) {
-        int index = randomNumberInt(0, newBag->getPackages().size() - 1);
-        const Package* packageToRemove = newBag->getPackages()[index];
+    for (int i = 0; i < k && !packagesInBag.empty(); ++i) {
+        // FIX: Cannot use operator[] on an unordered_set.
+        // We must advance an iterator a random number of steps to get a random element.
+        int offset = randomNumberInt(0, packagesInBag.size() - 1);
+        auto it = packagesInBag.begin();
+        std::advance(it, offset);
+        const Package* packageToRemove = *it;
         newBag->removePackage(*packageToRemove);
     }
 
-    // Randomly add k packages
+    // Get packages not currently in the bag
     std::vector<Package*> packagesOutside;
+    const auto& currentPackagesInBag = newBag->getPackages(); // Re-fetch after removals
     for (Package* p : allPackages) {
-        bool inBag = false;
-        for (const auto* pkgInBag : newBag->getPackages()) {
-            if (p->getName() == pkgInBag->getName()) {
-                inBag = true;
-                break;
-            }
-        }
-        if (!inBag) {
+        // FIX: Use the efficient .count() method instead of a slow nested loop.
+        if (currentPackagesInBag.count(p) == 0) {
             packagesOutside.push_back(p);
         }
     }
 
+    // Randomly add k valid packages from the outside list
     for (int i = 0; i < k && !packagesOutside.empty(); ++i) {
         int index = randomNumberInt(0, packagesOutside.size() - 1);
         Package* packageToAdd = packagesOutside[index];
         if (newBag->canAddPackage(*packageToAdd, bagSize)) {
             newBag->addPackage(*packageToAdd);
         }
+        // Erase the chosen package to prevent re-selection
         packagesOutside.erase(packagesOutside.begin() + index);
     }
 
@@ -234,36 +214,27 @@ Bag* Algorithm::shake(const Bag& currentBag, int k, const std::vector<Package*>&
 bool Algorithm::localSearch(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages, LOCAL_SEARCH localSearchMethod) {
     bool improved = false;
     bool localOptimum = false;
-    switch (localSearchMethod)
-    {
-        case LOCAL_SEARCH::BEST_IMPROVEMENT:
-            while (!localOptimum) {
-                if (exploreSwapNeighborhoodBestImprovement(currentBag, bagSize, allPackages)) {
-                    improved = true;
-                } else {
-                    localOptimum = true;
-            }
+    // Keep searching until no more improvements can be made
+    while (!localOptimum) {
+        bool improvement_found_this_iteration = false;
+        switch (localSearchMethod)
+        {
+            case LOCAL_SEARCH::BEST_IMPROVEMENT:
+                improvement_found_this_iteration = exploreSwapNeighborhoodBestImprovement(currentBag, bagSize, allPackages);
+                break;
+            case LOCAL_SEARCH::RANDOM_IMPROVEMENT:
+                improvement_found_this_iteration = exploreSwapNeighborhoodRandomImprovement(currentBag, bagSize, allPackages);
+                break;
+            default: // First improvement is the default
+                improvement_found_this_iteration = exploreSwapNeighborhoodFirstImprovement(currentBag, bagSize, allPackages);
+                break;
         }
-        break;
 
-        case LOCAL_SEARCH::RANDOM_IMPROVEMENT:
-            while (!localOptimum) {
-                if (exploreSwapNeighborhoodRandomImprovement(currentBag, bagSize, allPackages)) {
-                    improved = true;
-                } else {
-                    localOptimum = true;
-            }
+        if (improvement_found_this_iteration) {
+            improved = true;
+        } else {
+            localOptimum = true; // No improvement found, so we're at a local optimum
         }
-        break;
-    
-        default:
-            while (!localOptimum) {
-                if (exploreSwapNeighborhoodFirstImprovement(currentBag, bagSize, allPackages)) {
-                    improved = true;
-                } else {
-                    localOptimum = true;
-                }
-            }
     }
     return improved;
 }
@@ -272,33 +243,37 @@ bool Algorithm::exploreSwapNeighborhoodFirstImprovement(Bag& currentBag, int bag
     const auto& packagesInBag = currentBag.getPackages();
     std::vector<Package*> packagesOutsideBag;
     for (Package* p : allPackages) {
-        bool inBag = false;
-        for (const Package* pInBag : packagesInBag) {
-            if (p->getName() == pInBag->getName()) {
-                inBag = true;
-                break;
-            }
-        }
-        if (!inBag) {
+        // FIX: Use the efficient .count() method instead of a slow nested loop.
+        if (packagesInBag.count(p) == 0) {
             packagesOutsideBag.push_back(p);
         }
     }
 
-    for (const Package* packageIn : packagesInBag) {
+    // Create a copy of the packages in the bag to iterate over, avoiding iterator invalidation.
+    std::vector<const Package*> packagesInBagCopy(packagesInBag.begin(), packagesInBag.end());
+
+    for (const Package* packageIn : packagesInBagCopy) {
         for (Package* packageOut : packagesOutsideBag) {
-            Bag tempBag = currentBag;
-            tempBag.removePackage(*packageIn);
-            if (tempBag.canAddPackage(*packageOut, bagSize)) {
-                tempBag.addPackage(*packageOut);
-                if (tempBag.getBenefit() > currentBag.getBenefit()) {
-                    currentBag = tempBag;
-                    return true; // Improvement found
+            int originalBenefit = currentBag.getBenefit();
+            currentBag.removePackage(*packageIn);
+
+            if (currentBag.canAddPackage(*packageOut, bagSize)) {
+                currentBag.addPackage(*packageOut);
+                if (currentBag.getBenefit() > originalBenefit) {
+                    return true; // Improvement found and applied, so return immediately.
                 }
+                // Backtrack if not an improvement
+                currentBag.removePackage(*packageOut);
+                currentBag.addPackage(*packageIn);
+            } else {
+                // Backtrack if packageOut can't be added
+                currentBag.addPackage(*packageIn);
             }
         }
     }
     return false; // No improvement found
 }
+
 
 bool Algorithm::exploreSwapNeighborhoodBestImprovement(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages) {
     Bag bestNeighborBag = currentBag;
@@ -306,30 +281,22 @@ bool Algorithm::exploreSwapNeighborhoodBestImprovement(Bag& currentBag, int bagS
 
     const auto& packagesInBag = currentBag.getPackages();
     std::vector<Package*> packagesOutsideBag;
-
-    // Popula a lista de pacotes que não estão na mochila
     for (Package* p : allPackages) {
-        bool inBag = false;
-        for (const Package* pInBag : packagesInBag) {
-            if (p->getName() == pInBag->getName()) {
-                inBag = true;
-                break;
-            }
-        }
-        if (!inBag) {
+        // FIX: Use the efficient .count() method.
+        if (packagesInBag.count(p) == 0) {
             packagesOutsideBag.push_back(p);
         }
     }
+    
+    // Create a copy to iterate over, as the original bag can be modified.
+    std::vector<const Package*> packagesInBagCopy(packagesInBag.begin(), packagesInBag.end());
 
-    // Itera por todas as trocas possíveis
-    for (const Package* packageIn : packagesInBag) {
+    for (const Package* packageIn : packagesInBagCopy) {
         for (Package* packageOut : packagesOutsideBag) {
             Bag tempBag = currentBag;
             tempBag.removePackage(*packageIn);
-
             if (tempBag.canAddPackage(*packageOut, bagSize)) {
                 tempBag.addPackage(*packageOut);
-                // Se o benefício deste vizinho é o melhor até agora
                 if (tempBag.getBenefit() > bestNeighborBag.getBenefit()) {
                     bestNeighborBag = tempBag;
                     improvementFound = true;
@@ -338,64 +305,73 @@ bool Algorithm::exploreSwapNeighborhoodBestImprovement(Bag& currentBag, int bagS
         }
     }
 
-    // Se uma melhoria foi encontrada, atualiza a mochila atual para a melhor vizinha
     if (improvementFound) {
         currentBag = bestNeighborBag;
     }
-
     return improvementFound;
 }
 
 bool Algorithm::exploreSwapNeighborhoodRandomImprovement(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages) {
     std::vector<Bag> improvingNeighbors;
-
     const auto& packagesInBag = currentBag.getPackages();
     std::vector<Package*> packagesOutsideBag;
-    // Popula a lista de pacotes que não estão na mochila
+
     for (Package* p : allPackages) {
-        bool inBag = false;
-        for (const Package* pInBag : packagesInBag) {
-            if (p->getName() == pInBag->getName()) {
-                inBag = true;
-                break;
-            }
-        }
-        if (!inBag) {
+        // Use the efficient .count() method.
+        if (packagesInBag.count(p) == 0) {
             packagesOutsideBag.push_back(p);
         }
     }
+    
+    std::vector<const Package*> packagesInBagCopy(packagesInBag.begin(), packagesInBag.end());
 
-    // Itera por todas as trocas possíveis
-    for (const Package* packageIn : packagesInBag) {
-        for (Package* packageOut : packagesOutsideBag) {
-            Bag tempBag = currentBag;
-            tempBag.removePackage(*packageIn);
+    // A swap is only possible if there are packages both inside and outside the bag.
+    if (packagesInBagCopy.empty() || packagesOutsideBag.empty()) {
+        // No possible swaps, so no improvement can be made.
+        return false; // <-- FIX: Changed from 'return;' to 'return false;'
+    }
 
-            if (tempBag.canAddPackage(*packageOut, bagSize)) {
-                tempBag.addPackage(*packageOut);
-                // Se a troca melhora a solução, adiciona à lista de candidatos
-                if (tempBag.getBenefit() > currentBag.getBenefit()) {
-                    improvingNeighbors.push_back(tempBag);
-                }
+    // Define how many random swaps we should attempt. This is a tunable parameter.
+    // A higher number explores the neighborhood more thoroughly but takes more time.
+    const int numAttempts = 500;
+
+    for (int i = 0; i < numAttempts; ++i) {
+        // 1. Randomly select a package from INSIDE the bag using a random index.
+        int inIndex = randomNumberInt(0, packagesInBagCopy.size() - 1);
+        const Package* packageIn = packagesInBagCopy[inIndex];
+
+        // 2. Randomly select a package from OUTSIDE the bag using a random index.
+        int outIndex = randomNumberInt(0, packagesOutsideBag.size() - 1);
+        Package* packageOut = packagesOutsideBag[outIndex];
+        
+        // 3. Test this randomly selected swap.
+        Bag tempBag = currentBag;
+        tempBag.removePackage(*packageIn);
+        
+        if (tempBag.canAddPackage(*packageOut, bagSize)) {
+            tempBag.addPackage(*packageOut);
+            
+            // If the swap results in an improvement, add it to the list of candidates.
+            if (tempBag.getBenefit() > currentBag.getBenefit()) {
+                improvingNeighbors.push_back(tempBag);
             }
         }
     }
 
-    // Se encontramos vizinhos que melhoram a solução
+    // If we found any valid improvements, pick one at random and apply it.
     if (!improvingNeighbors.empty()) {
-        // Escolhe um dos vizinhos aleatoriamente
         int randomIndex = randomNumberInt(0, improvingNeighbors.size() - 1);
         currentBag = improvingNeighbors[randomIndex];
         return true;
     }
 
-    return false; // Nenhuma melhoria encontrada
+    // If after all attempts no improvements were found, return false.
+    return false;
 }
 
 std::vector<Bag*> Algorithm::greedyBag(int bagSize, const std::vector<Package*>& packages,
                                        const std::vector<Dependency*>& dependencies) {
     std::vector<Bag*> bags;
-
     std::vector<Package *> sortedByRatio = sortedPackagesByBenefitToSizeRatio(packages);
     std::vector<Package *> sortedByBenefit = sortedPackagesByBenefit(packages);
     std::vector<Package *> sortedBySize = sortedPackagesBySize(packages);
@@ -406,13 +382,10 @@ std::vector<Bag*> Algorithm::greedyBag(int bagSize, const std::vector<Package*>&
 
     bags.push_back(fillBagWithStrategy(bagSize, sortedByRatio, pickStrategy,
                                        ALGORITHM_TYPE::GREEDY_Package_Benefit_Ratio));
-
     bags.push_back(fillBagWithStrategy(bagSize, sortedByBenefit, pickStrategy,
                                        ALGORITHM_TYPE::GREEDY_Package_Benefit));
-
     bags.push_back(fillBagWithStrategy(bagSize, sortedBySize, pickStrategy,
                                        ALGORITHM_TYPE::GREEDY_Package_Size));
-
     return bags;
 }
 
@@ -441,125 +414,140 @@ std::vector<Bag*> Algorithm::randomGreedy(int bagSize, const std::vector<Package
 // == Core Logic and Utilities
 // ===================================================================
 
-Package *Algorithm::pickRandomPackage(std::vector<Package *> &packageList)
-{
-    // Return nullptr immediately if the vector is empty.
+Package* Algorithm::pickRandomPackage(std::vector<Package*>& packageList) {
     if (packageList.empty()) {
         return nullptr;
     }
-
-    // Generate a random index within the valid range of the vector.
     int index = randomNumberInt(0, packageList.size() - 1);
     Package* pickedPackage = packageList[index];
-
-    // Erase the chosen package from the vector using its iterator.
     packageList.erase(packageList.begin() + index);
-
     return pickedPackage;
 }
 
-Package *Algorithm::pickTopPackage(std::vector<Package *> &packageList)
-{
+Package* Algorithm::pickTopPackage(std::vector<Package*>& packageList) {
     if (packageList.empty()) {
         return nullptr;
     }
-    
-    // Get the package at the front of the list.
     Package* pickedPackage = packageList.front();
-    
-    // Remove the package from the list.
     packageList.erase(packageList.begin());
-
     return pickedPackage;
 }
 
-Package *Algorithm::pickSemiRandomPackage(std::vector<Package *> &packageList, int poolSize)
-{
-    // Immediately return nullptr if the vector is empty.
+Package* Algorithm::pickSemiRandomPackage(std::vector<Package*>& packageList, int poolSize) {
     if (packageList.empty()) {
         return nullptr;
     }
-
-    // Determine the actual size of the candidate pool. It's either the desired
-    // poolSize or the total number of packages, whichever is smaller.
     int candidatePoolSize = std::min(poolSize, static_cast<int>(packageList.size()));
-
-    // Pick a random index from within this elite candidate pool.
     int index = randomNumberInt(0, candidatePoolSize - 1);
     Package* pickedPackage = packageList[index];
-
-    // Remove the chosen package from the vector to prevent it from being picked again.
     packageList.erase(packageList.begin() + index);
-
     return pickedPackage;
 }
 
 Bag* Algorithm::fillBagWithStrategy(int bagSize, std::vector<Package*>& packages,
-                                     std::function<Package*(std::vector<Package*>&)> pickStrategy,
-                                     ALGORITHM_TYPE type) {
+                                      std::function<Package*(std::vector<Package*>&)> pickStrategy,
+                                      ALGORITHM_TYPE type) {
     auto bag = new Bag(type, m_timestamp);
     if (packages.empty()) {
         return bag;
     }
 
     auto compatibilityCache = std::unordered_map<const Package*, bool>();
-    std::chrono::duration<double> max_duration_seconds(m_maxTime);
-    auto end_time = std::chrono::high_resolution_clock::now();
-
     auto start_time = std::chrono::high_resolution_clock::now();
-    while (std::chrono::high_resolution_clock::now() - start_time < max_duration_seconds) {
+    std::chrono::duration<double> max_duration_seconds(m_maxTime);
+    
+    // This loop continues as long as there are packages to try and time hasn't run out.
+    while (!packages.empty()) {
+        if (std::chrono::high_resolution_clock::now() - start_time > max_duration_seconds) {
+            break;
+        }
         Package* packageToAdd = pickStrategy(packages);
         if (!packageToAdd) {
-            break; // Stop if the strategy provides no more packages.
+            break; 
         }
 
         if (canPackageBeAdded(*bag, *packageToAdd, bagSize, compatibilityCache)) {
             bag->addPackage(*packageToAdd);
         }
-        end_time = std::chrono::high_resolution_clock::now();
     }
 
+    auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     bag->setAlgorithmTime(elapsed_seconds.count());
-
     return bag;
+}
+
+bool Algorithm::removePackagesToFit(Bag& bag, int maxCapacity) {
+    // Loop as long as the bag is over its capacity.
+    while (bag.getSize() > maxCapacity) {
+        const auto& packagesInBag = bag.getPackages();
+
+        // If the bag is over capacity but has no packages, something is wrong. We can't fix it.
+        if (packagesInBag.empty()) {
+            return false;
+        }
+
+        const Package* worstPackageToRemove = nullptr;
+        // Initialize the minimum ratio to the highest possible value.
+        double minRatio = std::numeric_limits<double>::max();
+
+        // 1. Find the package with the worst (lowest) benefit-to-size ratio.
+        for (const Package* package : packagesInBag) {
+            int packageDependenciesSize = package->getDependenciesSize();
+            double ratio;
+
+            // Handle the edge case where dependencies might have a size of 0.
+            // A package with benefit and no size is infinitely valuable, so it should be the last to be removed.
+            if (packageDependenciesSize <= 0) {
+                // If benefit is also 0 or less, it's a prime candidate for removal.
+                ratio = (package->getBenefit() <= 0) ? -1.0 : std::numeric_limits<double>::max();
+            } else {
+                ratio = static_cast<double>(package->getBenefit()) / packageDependenciesSize;
+            }
+
+            // If we found a new "worst" package, track it.
+            if (ratio < minRatio) {
+                minRatio = ratio;
+                worstPackageToRemove = package;
+            }
+        }
+
+        // 2. If we found a package to remove, remove it.
+        if (worstPackageToRemove) {
+            bag.removePackage(*worstPackageToRemove);
+        } else {
+            // If no package was found (e.g., all have infinite ratio), we cannot proceed.
+            return false;
+        }
+    }
+
+    // The bag is now within the size limit.
+    return true;
 }
 
 std::vector<Package *> Algorithm::sortedPackagesByBenefit(const std::vector<Package *> &packages)
 {
-        // Create a copy of the package list to avoid modifying the original.
     auto sortedList = packages;
-
-    // Sort the list in-place.
     std::sort(sortedList.begin(), sortedList.end(), [](const Package* a, const Package* b) {
-        // The comparison function sorts packages from highest benefit to lowest.
         return a->getBenefit() > b->getBenefit();
     });
     return sortedList;
 }
 
 std::vector<Package*> Algorithm::sortedPackagesByBenefitToSizeRatio(const std::vector<Package*>& packages) {
-    // Create a copy of the package list to avoid modifying the original.
     auto sortedList = packages;
-
-    // Sort the list in-place.
     std::sort(sortedList.begin(), sortedList.end(), [](const Package* a, const Package* b) {
-        int aDependenciesSize = a->getDependenciesSize();
-        int bDependenciesSize = b->getDependenciesSize();
-        // The comparison function sorts packages from highest benefit to lowest.
-        return a->getBenefit() + aDependenciesSize> b->getBenefit() + bDependenciesSize;
+        // Handle division by zero for packages with no dependencies.
+        double ratio_a = (a->getDependenciesSize() > 0) ? static_cast<double>(a->getBenefit()) / a->getDependenciesSize() : a->getBenefit();
+        double ratio_b = (b->getDependenciesSize() > 0) ? static_cast<double>(b->getBenefit()) / b->getDependenciesSize() : b->getBenefit();
+        return ratio_a > ratio_b;
     });
     return sortedList;
 }
 
-std::vector<Package *> Algorithm::sortedPackagesBySize(const std::vector<Package *> &packages)
-{
-        // Create a copy of the package list to avoid modifying the original.
+std::vector<Package*> Algorithm::sortedPackagesBySize(const std::vector<Package*>& packages) {
     auto sortedList = packages;
-
-    // Sort the list in-place.
     std::sort(sortedList.begin(), sortedList.end(), [](const Package* a, const Package* b) {
-        // The comparison function sorts packages from highest benefit to lowest.
         return a->getDependenciesSize() < b->getDependenciesSize();
     });
     return sortedList;
@@ -567,49 +555,28 @@ std::vector<Package *> Algorithm::sortedPackagesBySize(const std::vector<Package
 
 int Algorithm::randomNumberInt(int min, int max)
 {
-    // This function provides high-quality random numbers.
-    // The generator is `static` so it's seeded only once, improving performance.
     static std::mt19937 generator(std::chrono::system_clock::now().time_since_epoch().count());
-
-    if(min > 0) min = 0;
-    
-    // Ensure min is not greater than max to avoid undefined behavior.
     if (min > max) {
-        std::swap(min, max);
+        // Return min if the range is invalid to avoid crashing.
+        return min;
     }
-
-    // Create a distribution that will produce integers uniformly in the [min, max] range.
     std::uniform_int_distribution<> distribution(min, max);
-    
-    // Generate and return a random number.
-    int randomNumber = distribution(generator);
-    return randomNumber;
+    return distribution(generator);
 }
 
-void Algorithm::precomputeDependencyGraph(const std::vector<Package *> &packages,
-                                          const std::vector<Dependency *> &dependencies)
+void Algorithm::precomputeDependencyGraph(const std::vector<Package*>& packages,
+                                          const std::vector<Dependency*>& dependencies)
 {
-    // This is a stub for a potential optimization.
-    // A real implementation would build a graph (e.g., an adjacency list)
-    // to make dependency lookups much faster than iterating through lists every time.
+    // Stub for potential optimization.
 }
 
 bool Algorithm::canPackageBeAdded(const Bag& bag, const Package& package, int maxCapacity,
                                   std::unordered_map<const Package*, bool>& cache) {
-    // This function checks if a package is worth considering, using a cache (memoization) to speed up repeated checks.
-    
-    // 1. Check the cache first. If we've seen this package before, return the stored result.
     auto it = cache.find(&package);
     if (it != cache.end()) {
         return it->second;
     }
-
-    // 2. If not in cache, perform the actual check using the Bag's internal logic.
-    // The Bag class is responsible for the complex rules of what can be added.
     bool result = bag.canAddPackage(package, maxCapacity);
-
-    // 3. Store the result in the cache for future lookups before returning.
     cache[&package] = result;
-    
     return result;
 }

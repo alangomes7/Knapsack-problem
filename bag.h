@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <unordered_set>
 #include "algorithm.h"
 
 class Package;
@@ -26,25 +27,25 @@ public:
     explicit Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp);
 
     /**
-     * @brief Constructs a new Bag pre-filled with a list of packages.
+     * @brief Constructs a new Bag by populating it from a vector of packages.
      * @note This constructor is intended for creating a Bag from a pre-determined
-     * set of packages, like a final solution. It calculates the initial size
+     * set of packages. It populates the internal set, calculates the initial size,
      * and resolves dependencies from the provided packages.
      * @param packages A vector of pointers to Package objects to place in the bag.
      */
     explicit Bag(const std::vector<Package*>& packages);
 
     /**
-     * @brief Gets the list of packages currently in the bag.
-     * @return A constant reference to the vector of const Package pointers.
+     * @brief Gets the set of packages currently in the bag.
+     * @return A constant reference to the unordered_set of const Package pointers.
      */
-    const std::vector<const Package*>& getPackages() const;
+    const std::unordered_set<const Package*>& getPackages() const;
 
     /**
-     * @brief Gets the list of unique dependencies required by the packages in the bag.
-     * @return A constant reference to the vector of const Dependency pointers.
+     * @brief Gets the set of unique dependencies required by the packages in the bag.
+     * @return A constant reference to the unordered_set of const Dependency pointers.
      */
-    const std::vector<const Dependency*>& getDependencies() const;
+    const std::unordered_set<const Dependency*>& getDependencies() const;
 
     /**
      * @brief Gets the total combined size of all dependencies in the bag.
@@ -128,7 +129,7 @@ public:
 private:
     /**
      * @brief A helper method to add a list of dependencies to the bag, avoiding duplicates.
-     * @param dependencies The vector of Dependency pointers to add.
+     * @param dependencies The map of Dependency pointers to add.
      */
     void addDependencies(const std::unordered_map<std::string, Dependency*>& dependencies);
 
@@ -137,8 +138,8 @@ private:
     std::string m_timeStamp = "0000-00-00 00:00:00";
     int m_size;
     double m_algorithmTimeSeconds;
-    std::vector<const Package*> m_baggedPackages;
-    std::vector<const Dependency*> m_baggedDependencies;
+    std::unordered_set<const Package*> m_baggedPackages;
+    std::unordered_set<const Dependency*> m_baggedDependencies;
 };
 
 #endif // BAG_H
