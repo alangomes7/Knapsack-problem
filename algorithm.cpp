@@ -111,8 +111,9 @@ Bag *Algorithm::vndBag(int bagSize, Bag *initialBag, const std::vector<Package *
     bool improved = true;
 
     std::chrono::duration<double> max_duration_seconds(m_maxTime);
-    auto start_time = std::chrono::high_resolution_clock::now();
+    auto end_time = std::chrono::high_resolution_clock::now();
 
+    auto start_time = std::chrono::high_resolution_clock::now();
     while (improved && std::chrono::high_resolution_clock::now() - start_time < max_duration_seconds) {
         improved = false;
         // Neighborhood 1: Swap one package from the bag with one outside
@@ -148,9 +149,9 @@ Bag *Algorithm::vndBag(int bagSize, Bag *initialBag, const std::vector<Package *
             }
         }
         next_iteration:;
+        end_time = std::chrono::high_resolution_clock::now();
     }
 
-    auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     bestBag->setAlgorithmTime(elapsed_seconds.count());
     return bestBag;
@@ -164,10 +165,11 @@ Bag* Algorithm::vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>
     int k = 1;
     const int k_max = 5; // The maximum neighborhood size for shaking
 
-    auto start_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> max_duration_seconds(m_maxTime);
+    auto end_time = std::chrono::high_resolution_clock::now();
 
-    while (std::chrono::high_resolution_clock::now() - start_time < max_duration_seconds && k <= k_max) {
+    auto start_time = std::chrono::high_resolution_clock::now();
+    while (k <= k_max && std::chrono::high_resolution_clock::now() - start_time < max_duration_seconds) {
         // 1. Shaking: Generate a random solution in the k-th neighborhood
         Bag* shakenBag = shake(*bestBag, k, allPackages, bagSize);
 
@@ -179,13 +181,14 @@ Bag* Algorithm::vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>
             delete bestBag;
             bestBag = shakenBag;
             k = 1; // Reset to the first neighborhood
+            end_time = std::chrono::high_resolution_clock::now();
         } else {
             delete shakenBag;
             k++; // Move to the next neighborhood
+            end_time = std::chrono::high_resolution_clock::now();
         }
     }
 
-    auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     bestBag->setAlgorithmTime(elapsed_seconds.count());
     return bestBag;
@@ -500,9 +503,10 @@ Bag* Algorithm::fillBagWithStrategy(int bagSize, std::vector<Package*>& packages
     }
 
     auto compatibilityCache = std::unordered_map<const Package*, bool>();
-    auto start_time = std::chrono::high_resolution_clock::now();
-
     std::chrono::duration<double> max_duration_seconds(m_maxTime);
+    auto end_time = std::chrono::high_resolution_clock::now();
+
+    auto start_time = std::chrono::high_resolution_clock::now();
     while (std::chrono::high_resolution_clock::now() - start_time < max_duration_seconds) {
         Package* packageToAdd = pickStrategy(packages);
         if (!packageToAdd) {
@@ -512,9 +516,9 @@ Bag* Algorithm::fillBagWithStrategy(int bagSize, std::vector<Package*>& packages
         if (canPackageBeAdded(*bag, *packageToAdd, bagSize, compatibilityCache)) {
             bag->addPackage(*packageToAdd);
         }
+        end_time = std::chrono::high_resolution_clock::now();
     }
 
-    auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     bag->setAlgorithmTime(elapsed_seconds.count());
 
