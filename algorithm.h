@@ -137,21 +137,37 @@ private:
     Package* pickSemiRandomPackage(std::vector<Package*>& packageList, int poolSize = 10);
 
     /**
-     * @brief A generic worker function that fills a bag using a specified package-picking strategy.
-     * @details This function implements a template method pattern. It iteratively calls the
-     * `pickStrategy` function to select the next candidate package, checks if it can be added
-     * (capacity and dependencies), and adds it to the bag if valid. This loop continues until
-     * no more packages can be added from the list.
+     * @brief Efficiently fills a bag using a given package selection strategy.
      *
-     * @param bagSize The maximum capacity of the bag.
-     * @param packages The list of available packages to select from. This list will be consumed.
-     * @param pickStrategy A function pointer or lambda that encapsulates the selection logic (e.g., pickTopPackage).
-     * @param type The algorithm type being run, used for specific logic branches if needed.
-     * @return A pointer to the newly created and filled Bag.
+     * @details
+     * This function implements the constructive phase of heuristics. It repeatedly:
+     *   1. Uses the provided `pickStrategy` to select a candidate package from the pool.
+     *   2. Checks whether the package can be added without exceeding capacity or violating dependency constraints.
+     *   3. Adds the package if feasible.
+     *
+     * Performance optimizations:
+     *   - Uses a function pointer instead of std::function to avoid virtual dispatch.
+     *   - Avoids expensive vector erase operations when possible (swap-and-pop is recommended).
+     *   - Caches feasibility checks (`canAddPackage`) in an unordered_map to skip repeated evaluations.
+     *   - Throttles time-limit checks (every N iterations instead of each loop) to reduce chrono overhead.
+     *   - Pre-reserves cache memory proportional to the number of packages.
+     *
+     * The loop terminates when either:
+     *   - The bag reaches the maximum allowed size,
+     *   - No valid package can be added,
+     *   - The given time budget (`m_maxTime`) is exceeded.
+     *
+     * @param bagSize The maximum capacity of the bag (size constraint).
+     * @param packages The pool of candidate packages (consumed during execution).
+     *                 The strategy may mutate this container (e.g., via swap-and-pop).
+     * @param pickStrategy A pointer to a selection function (e.g., pickTopPackage, pickRandomPackage).
+     *                     It must return a pointer to the chosen package or nullptr if none remain.
+     * @param type The algorithm type being executed (metadata stored in the Bag).
+     * @return A pointer to a newly constructed and filled Bag. Caller owns the memory.
      */
     Bag* fillBagWithStrategy(int bagSize, std::vector<Package*>& packages,
-                             std::function<Package*(std::vector<Package*>&)> pickStrategy,
-                             ALGORITHM_TYPE type);
+                                      std::function<Package*(std::vector<Package*>&)> pickStrategy,
+                                      ALGORITHM_TYPE type);
 
     /**
      * @brief Implements the random package selection algorithm.
@@ -261,6 +277,21 @@ private:
      * @return `true` if an improved solution was found and applied, `false` otherwise.
      */
     bool exploreSwapNeighborhoodRandomImprovement(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages);
+
+    /**
+     * @brief Evaluate a potential swap between an inside-package and an outside-package.
+     *
+     * @param currentBag   The current solution bag.
+     * @param packageIn    Package currently in the bag (to remove).
+     * @param packageOut   Package outside the bag (to add).
+     * @param bagSize      Maximum allowed bag size.
+     * @param currentBenefit Cached current total benefit of the bag.
+     * @param[out] benefitIncrease Stores the computed benefit increase if feasible.
+     *
+     * @return true if the swap is feasible AND strictly improves benefit, false otherwise.
+     */
+    bool evaluateSwap(const Bag& currentBag, const Package* packageIn, Package* packageOut, int bagSize,
+                        int currentBenefit, int& benefitIncrease) const;
 
     /**
      * @brief Implements the family of greedy selection algorithms.

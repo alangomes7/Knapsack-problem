@@ -4,26 +4,24 @@
 
 #include <string>
 #include <algorithm>
-#include <unordered_set>
 
 Bag::Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp)
     : m_bagAlgorithm(bagAlgorithm),
       m_timeStamp(timestamp),
       m_size(0),
+      m_benefit(0), // Init cached benefit
       m_algorithmTimeSeconds(0.0),
       m_localSearch(Algorithm::LOCAL_SEARCH::NONE) {
-    // This constructor creates a new, empty bag, ready to be filled by an algorithm.
-    // The size is initialized to zero.
 }
 
 Bag::Bag(const std::vector<Package*>& packages)
     : m_bagAlgorithm(Algorithm::ALGORITHM_TYPE::NONE),
       m_size(0),
-      m_algorithmTimeSeconds(0.0) {
-    // This constructor creates a bag from a pre-existing list of packages.
-    // It iterates through the provided packages and adds each one to this bag.
+      m_benefit(0), // Init cached benefit
+      m_algorithmTimeSeconds(0.0),
+      m_localSearch(Algorithm::LOCAL_SEARCH::NONE) {
     for (const auto* pkg : packages) {
-        if (pkg) { // Ensure the pointer is not null
+        if (pkg) {
             this->addPackage(*pkg);
         }
     }
@@ -38,16 +36,12 @@ const std::unordered_set<const Dependency*>& Bag::getDependencies() const {
 }
 
 int Bag::getSize() const {
-    // The size of the bag is the sum of the sizes of its unique dependencies.
     return m_size;
 }
 
 int Bag::getBenefit() const {
-    int benefit = 0;
-    for (const Package* package : m_baggedPackages) {
-        benefit += package->getBenefit();
-    }
-    return benefit;
+    // OPTIMIZATION: Return the cached value in O(1) time.
+    return m_benefit;
 }
 
 Algorithm::ALGORITHM_TYPE Bag::getBagAlgorithm() const {
@@ -79,75 +73,94 @@ void Bag::setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm) {
 }
 
 bool Bag::addPackage(const Package& package) {
-    // FIX: Use the insert() method for std::unordered_set.
-    // It returns a pair, where .second is a bool that is true if insertion
-    // took place (i.e., the element was not already present).
     auto result = m_baggedPackages.insert(&package);
-
     if (!result.second) {
-        // The package was already in the bag.
-        return false;
+        return false; // Package was already in the bag.
     }
 
-    // Add its dependencies. The helper function handles duplicates and updates the bag's total size.
-    addDependencies(package.getDependencies());
+    // OPTIMIZATION: Update benefit cache.
+    m_benefit += package.getBenefit();
+
+    // OPTIMIZATION: Use reference counting for dependencies.
+    for (const auto& pair : package.getDependencies()) {
+        const Dependency* dep = pair.second;
+        m_dependencyRefCount[dep]++;
+        if (m_dependencyRefCount[dep] == 1) {
+            // This is a new dependency for the bag.
+            m_size += dep->getSize();
+            m_baggedDependencies.insert(dep);
+        }
+    }
     return true;
 }
 
 void Bag::removePackage(const Package& package) {
-    // FIX: Use erase(key) for std::unordered_set, which is more direct and efficient.
-    // It returns the number of elements erased (0 or 1 for a set).
     if (m_baggedPackages.erase(&package) == 0) {
-        // If the package wasn't in the bag, there's nothing to do.
-        return;
+        return; // Package was not in the bag.
     }
 
-    // Now, we must check if any dependencies are no longer needed.
-    // 1. Create a set of all dependencies that are still required by the REMAINING packages.
-    std::unordered_set<const Dependency*> stillNeededDependencies;
-    for (const auto* pkg : m_baggedPackages) {
-        for (const auto& pair : pkg->getDependencies()) {
-            stillNeededDependencies.insert(pair.second);
+    // OPTIMIZATION: Update benefit cache.
+    m_benefit -= package.getBenefit();
+
+    // OPTIMIZATION: Decrement reference counts and update size if a dependency is no longer needed.
+    for (const auto& pair : package.getDependencies()) {
+        const Dependency* dep = pair.second;
+        m_dependencyRefCount[dep]--;
+        if (m_dependencyRefCount[dep] == 0) {
+            // This dependency is no longer required by any package.
+            m_size -= dep->getSize();
+            m_dependencyRefCount.erase(dep);
+            m_baggedDependencies.erase(dep);
         }
-    }
-
-    // FIX: The remove-erase idiom is ONLY for sequence containers (like vector).
-    // For an unordered_set, we must iterate and erase, or simply rebuild it.
-    // Rebuilding is often cleaner and avoids iterator invalidation issues.
-    m_baggedDependencies.clear();
-    m_size = 0;
-    for (const Dependency* dep : stillNeededDependencies) {
-        m_baggedDependencies.insert(dep);
-        m_size += dep->getSize();
     }
 }
 
 bool Bag::canAddPackage(const Package& package, int maxCapacity) const {
     int potentialSizeIncrease = 0;
-
-    // Iterate through the dependencies of the package we're considering.
+    // OPTIMIZATION: Calculate size increase by checking against the ref count map.
     for (const auto& pair : package.getDependencies()) {
         const Dependency* dependency = pair.second;
-
-        // FIX: Use the efficient .count() method for std::unordered_set instead of std::find.
-        // .count() returns 1 if the element exists, 0 otherwise.
-        if (m_baggedDependencies.count(dependency) == 0) {
-            // If it's not already present, adding this package would also add this dependency.
+        if (m_dependencyRefCount.find(dependency) == m_dependencyRefCount.end()) {
+            // If the dependency is not in our map, it's a new dependency.
             potentialSizeIncrease += dependency->getSize();
         }
     }
-
-    // The package can be added if the current size plus the potential increase does not exceed capacity.
     return (m_size + potentialSizeIncrease) <= maxCapacity;
 }
 
+bool Bag::canSwap(const Package& packageIn, const Package& packageOut, int bagSize) const {
+    // OPTIMIZATION: Fast, accurate check using reference counting.
+    int sizeChange = 0;
+
+    // Calculate size increase from the incoming package's dependencies.
+    for (const auto& pair : packageOut.getDependencies()) {
+        const Dependency* dep = pair.second;
+        // If the dependency is not already in the bag, its full size is added.
+        if (m_dependencyRefCount.find(dep) == m_dependencyRefCount.end()) {
+            sizeChange += dep->getSize();
+        }
+    }
+
+    // Calculate size decrease from the outgoing package's dependencies.
+    for (const auto& pair : packageIn.getDependencies()) {
+        const Dependency* dep = pair.second;
+        // If the dependency is only required by the package we are swapping out,
+        // its full size will be removed.
+        if (m_dependencyRefCount.at(dep) == 1) {
+            sizeChange -= dep->getSize();
+        }
+    }
+
+    return (m_size + sizeChange) <= bagSize;
+}
+
 std::string Bag::toString() const {
-    // Creating a temporary instance is a simple way to access its `toString` method.
     Algorithm algoHelper(0);
     std::string bagString;
 
     bagString += "Algorithm: " + algoHelper.toString(m_bagAlgorithm) + " | " + algoHelper.toString(m_localSearch) + "\n";
     bagString += "Bag size: " + std::to_string(m_size) + "\n";
+    bagString += "Total Benefit: " + std::to_string(m_benefit) + "\n"; // Added benefit
     bagString += "Execution Time: " + std::to_string(m_algorithmTimeSeconds) + "s\n";
     bagString += "Packages: " + std::to_string(m_baggedPackages.size()) + "\n - - - \n";
 
@@ -157,23 +170,4 @@ std::string Bag::toString() const {
         }
     }
     return bagString;
-}
-
-// ===================================================================
-// == Private Helper Methods
-// ===================================================================
-
-void Bag::addDependencies(const std::unordered_map<std::string, Dependency*>& dependencies) {
-    // This helper iterates through the dependencies of a newly added package.
-    for (const auto& pair : dependencies) {
-        const Dependency* dependency = pair.second;
-        if (!dependency) continue; // Safety check
-
-        // FIX: Use the insert() method. Its return value tells us if the element was new.
-        auto result = m_baggedDependencies.insert(dependency);
-        if (result.second) {
-            // If .second is true, the dependency was new, so we add its size to the total.
-            m_size += dependency->getSize();
-        }
-    }
 }

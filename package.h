@@ -74,6 +74,17 @@ public:
     void addDependency(Dependency& dependency);
 
     /**
+     * @brief Check whether this package depends on a given dependency.
+     *
+     * This method checks if the package contains the specified dependency
+     * in its internal dependency map.
+     *
+     * @param dependency Pointer to the dependency to check.
+     * @return true if the package has this dependency, false otherwise.
+     */
+    bool hasDependency(const Dependency* dependency) const;
+
+    /**
      * @brief Creates a string representation of the Package object.
      *  Generates a detailed, human-readable string representation of the
      * package, including its name, benefit, and a list of its dependencies.

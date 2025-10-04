@@ -37,7 +37,16 @@ void Package::addDependency(Dependency& dependency) {
     m_dependencies[dependency.getName()] = &dependency;
 }
 
-std::string Package::toString() const {
+bool Package::hasDependency(const Dependency *dependency) const
+{
+    if (!dependency) {
+        return false;
+    }
+    return m_dependencies.count(dependency->getName()) > 0;
+}
+
+std::string Package::toString() const
+{
     std::string package_string;
     package_string += "Package: " + m_name + "\n";
     package_string += "Benefit: " + std::to_string(m_benefit) + "\n";

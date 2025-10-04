@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <unordered_set>
+#include <unordered_map>
 #include "algorithm.h"
 
 class Package;
@@ -53,7 +54,7 @@ public:
      */
     int getSize() const;
 
-        /**
+    /**
      * @brief Gets the total combined benefit of all packages in the bag.
      * @return The total benefit as an integer.
      */
@@ -65,6 +66,10 @@ public:
      */
     Algorithm::ALGORITHM_TYPE getBagAlgorithm() const;
 
+    /**
+     * @brief Gets the type of local search algorithm used on this bag.
+     * @return The LOCAL_SEARCH enum value.
+     */
     Algorithm::LOCAL_SEARCH getBagLocalSearch() const;
 
     /**
@@ -85,6 +90,10 @@ public:
      */
     void setAlgorithmTime(double seconds);
 
+    /**
+     * @brief Sets the local search algorithm type for the bag.
+     * @param localSearch The local search algorithm type to set.
+     */
     void setLocalSearch(Algorithm::LOCAL_SEARCH localSearch);
 
     /**
@@ -121,25 +130,36 @@ public:
     bool canAddPackage(const Package& package, int maxCapacity) const;
 
     /**
+     * @brief Check if swapping a package inside the bag with a package outside is feasible.
+     *
+     * This method evaluates the feasibility of a swap without modifying the bag by
+     * calculating the net change in size based on shared and unique dependencies.
+     *
+     * @param packageIn  The package currently in the bag that will be removed.
+     * @param packageOut The package currently outside the bag that will be added.
+     * @param bagSize    Maximum capacity of the bag.
+     * @return true if the swap is feasible, false otherwise.
+     */
+    bool canSwap(const Package& packageIn, const Package& packageOut, int bagSize) const;
+
+    /**
      * @brief Generates a string summary of the bag's contents.
      * @return A std::string describing the bag's state.
      */
     std::string toString() const;
 
 private:
-    /**
-     * @brief A helper method to add a list of dependencies to the bag, avoiding duplicates.
-     * @param dependencies The map of Dependency pointers to add.
-     */
-    void addDependencies(const std::unordered_map<std::string, Dependency*>& dependencies);
-
     Algorithm::ALGORITHM_TYPE m_bagAlgorithm;
     Algorithm::LOCAL_SEARCH m_localSearch;
     std::string m_timeStamp = "0000-00-00 00:00:00";
     int m_size;
+    int m_benefit; // OPTIMIZATION: Cached total benefit
     double m_algorithmTimeSeconds;
+
     std::unordered_set<const Package*> m_baggedPackages;
     std::unordered_set<const Dependency*> m_baggedDependencies;
+    // OPTIMIZATION: Map to track how many packages require each dependency.
+    std::unordered_map<const Dependency*, int> m_dependencyRefCount;
 };
 
 #endif // BAG_H

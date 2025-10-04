@@ -108,7 +108,7 @@ void KnapsackWindow::onRunButtonClicked() {
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit)));
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit_Ratio)));
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Size)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VND)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VND, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT)));
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::FIRST_IMPROVEMENT)));
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT)));
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT)));
@@ -193,8 +193,10 @@ void KnapsackWindow::loadFile() {
 
     for (auto const& [key, val] : m_availablePackages) { delete val; }
     m_availablePackages.clear();
+    m_availablePackages.reserve(processedData.at(0).at(0).toInt());
     for (auto const& [key, val] : m_availableDependencies) { delete val; }
     m_availableDependencies.clear();
+    m_availableDependencies.reserve(processedData.at(0).at(1).toInt());
 
     m_bagSize = processedData.at(0).at(3).toInt();
     const auto& packagesData = processedData.at(1);
