@@ -60,6 +60,11 @@ std::string Bag::getTimestamp() const {
     return m_timeStamp;
 }
 
+const std::string &Bag::getMetaheuristicParameters() const
+{
+    return m_metaheuristicParams;
+}
+
 void Bag::setAlgorithmTime(double seconds) {
     m_algorithmTimeSeconds = seconds;
 }
@@ -70,6 +75,12 @@ void Bag::setLocalSearch(Algorithm::LOCAL_SEARCH localSearch) {
 
 void Bag::setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm) {
     m_bagAlgorithm = bagAlgorithm;
+}
+
+void Bag::setMetaheuristicParameters(const std::string &params)
+{
+    m_metaheuristicParams = params;
+
 }
 
 bool Bag::addPackage(const Package& package) {

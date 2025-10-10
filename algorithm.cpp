@@ -1,6 +1,5 @@
 #include "algorithm.h"
 
-#include <random>
 #include <chrono>
 #include <utility>
 #include <algorithm>
@@ -13,6 +12,11 @@
 
 Algorithm::Algorithm(double maxTime)
     : m_maxTime(maxTime) {
+}
+
+Algorithm::Algorithm(double maxTime, unsigned int seed)
+    : m_maxTime(maxTime), m_generator(seed)
+{
 }
 
 // Executes all strategies
@@ -139,6 +143,7 @@ Bag* Algorithm::vnsBag(int bagSize, Bag* initialBag, const std::vector<Package*>
 
     int k = 1;
     const int k_max = 5;
+    bestBag->setMetaheuristicParameters("k_max=" + std::to_string(k_max));
 
     auto start_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> max_duration_seconds(m_maxTime);
@@ -537,12 +542,11 @@ std::vector<Package*> Algorithm::sortedPackagesBySize(const std::vector<Package*
 
 int Algorithm::randomNumberInt(int min, int max)
 {
-    static std::mt19937 generator(std::chrono::system_clock::now().time_since_epoch().count());
     if (min > max) {
         return min;
     }
     std::uniform_int_distribution<> distribution(min, max);
-    return distribution(generator);
+    return distribution(m_generator);
 }
 
 void Algorithm::precomputeDependencyGraph(const std::vector<Package*>& packages,

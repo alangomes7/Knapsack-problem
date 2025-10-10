@@ -100,6 +100,36 @@ private:
      */
     void printBag(const std::string& algorithmName);
 
+    /**
+     * @brief Saves a detailed report for the best solution found in a population.
+     *
+     * This function identifies the bag with the highest benefit from the provided vector
+     * and generates a detailed report file.
+     *
+     * @param bags A constant reference to a vector of pointers to Bag objects, representing the solution population.
+     * @param allPackages A map of all available packages, used to generate the binary solution vector.
+     * @param allDependencies A map of all available dependencies.
+     * @param seed The random seed used for the experiment.
+     * @param filePath The path to the original input file, used for naming the report.
+     * @param timestamp The timestamp string to append to the report filename.
+     */
+    void saveReport(const std::vector<Bag*>& bags, 
+                    const std::unordered_map<std::string, Package*>& allPackages, 
+                    const std::unordered_map<std::string, Dependency*>& allDependencies, 
+                    unsigned int seed, 
+                    const std::string& filePath, 
+                    const std::string& timestamp);
+    
+    /**
+     * @brief Converts a timestamp string to a filename-friendly format.
+     * * Replaces spaces and colons with underscores.
+     * Example: "2025-10-10 08:36:43" becomes "2025-10-10_08_36_43".
+     *
+     * @param timestamp The input timestamp string.
+     * @return A new string with the converted format.
+     */
+    std::string formatTimestampForFilename(std::string timestamp);
+
     /// A pointer to the UI layout and widgets created in Qt Designer.
     Ui::KnapsackWindow *ui;
 

@@ -11,6 +11,10 @@
 
 #include <chrono>
 #include <string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <random>
 
 #include "algorithm.h"
 
@@ -40,6 +44,14 @@ KnapsackWindow::~KnapsackWindow() {
 void KnapsackWindow::initializeUiElements()
 {
     m_bagSize = 0;
+    QIntValidator* validator = new QIntValidator(0, 100, this);
+    ui->lineEdit_seed->setValidator(validator);
+
+    std::random_device rd;
+    std::mt19937 engine(rd()); 
+    std::uniform_int_distribution<int> distribution(0, 100);
+    ui->lineEdit_seed->setText(QString::number(distribution(engine)));
+
     ui->plainTextEdit_logs->setReadOnly(true);
     ui->comboBox_algorithm->addItem("Select Algorithm");
     ui->label_bagCapacityNumber->setText(QString::number(m_bagSize) + " MB");
@@ -93,11 +105,11 @@ void KnapsackWindow::onRunButtonClicked() {
         dependenciesVec.push_back(val);
     }
 
-    std::string timeStamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss").toStdString();
+    std::string timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss").toStdString();
     int executionTime = (ui->comboBox_executionTime->currentText().remove("s")).toInt();
 
     m_algorithm = new Algorithm(executionTime);
-    m_bags = m_algorithm->run(Algorithm::ALGORITHM_TYPE::RANDOM, m_bagSize, packagesVec, dependenciesVec, timeStamp);
+    m_bags = m_algorithm->run(Algorithm::ALGORITHM_TYPE::RANDOM, m_bagSize, packagesVec, dependenciesVec, timestamp);
 
     // Clear and populate ComboBox with normalized labels
     ui->comboBox_algorithm->clear();
@@ -114,6 +126,7 @@ void KnapsackWindow::onRunButtonClicked() {
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT)));
 
     saveData();
+    saveReport(m_bags, m_availablePackages, m_availableDependencies, ui->lineEdit_seed->text().toInt(), m_filePath.toStdString(), timestamp);
 }
 
 void KnapsackWindow::onAlgorithmChanged() {
@@ -296,4 +309,111 @@ void KnapsackWindow::printBag(const std::string& algorithmName) {
     ui->label_bagCapacityNumber->setText(QString::number(bagToPrint->getSize()) + " MB");
     ui->label_bagBenefitNumber->setText(QString::number(bagToPrint->getBenefit()) + " MB");
     ui->label_processingTimeNumber->setText(QString::number(bagToPrint->getAlgorithmTime()) + " s");
+}
+
+void KnapsackWindow::saveReport(const std::vector<Bag*>& bags,
+                                const std::unordered_map<std::string, Package*>& allPackages,
+                                const std::unordered_map<std::string, Dependency*>& allDependencies,
+                                unsigned int seed, const std::string& filePath,
+                                const std::string& timestamp) {
+
+    // 1. Find the best bag to generate the report.
+    if (bags.empty()) {
+        std::cerr << "Error: Cannot generate report from an empty set of solutions." << std::endl;
+        return;
+    }
+
+    auto bestBagIt = std::max_element(bags.begin(), bags.end(), [](const Bag* a, const Bag* b) {
+        return a->getBenefit() < b->getBenefit();
+    });
+    const Bag* bestBag = *bestBagIt;
+
+    // 2. Create a unique and robust report filename.
+    std::filesystem::path inputPath(filePath);
+    std::string directory = inputPath.parent_path().string();
+    std::string stem = inputPath.stem().string();
+    std::string reportFileName = directory + "/report_" + stem + "_" + formatTimestampForFilename(timestamp) + ".txt";
+
+    // 3. Write the report file.
+    std::ofstream outFile(reportFileName);
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Could not open " << reportFileName << " for writing." << std::endl;
+        return;
+    }
+
+    outFile << "--- Experiment Reproduction Report for " << inputPath.filename().string() << " ---" << std::endl;
+
+    // Methaeuristic used
+    Algorithm algorithmAux(0);
+    outFile << "Methaeuristic: " << algorithmAux.toString(bestBag->getBagAlgorithm()) + " | " + algorithmAux.toString(bestBag->getBagLocalSearch()) << std::endl;
+
+    // (a) Benefit value
+    outFile << "Benefit Value: " << bestBag->getBenefit() << std::endl;
+
+    // (b) Total disk space
+    outFile << "Total Disk Space (Dependencies): " << bestBag->getSize() << " MB" << std::endl;
+
+    // (c) Solution as binary vectors (Corrected and efficient logic)
+    outFile << "Solution (Binary Vectors):" << std::endl;
+
+    // --- Packages Vector ---
+    // Create a set of package names in the best solution for fast O(1) lookups.
+    std::unordered_set<std::string> solutionPackages;
+    for (const auto& pkg : bestBag->getPackages()) {
+        solutionPackages.insert(pkg->getName());
+    }
+
+    // To ensure a consistent order, get all package names, sort them, then build the vector.
+    std::vector<std::string> allPackageNames;
+    allPackageNames.reserve(allPackages.size());
+    for (const auto& pair : allPackages) {
+        allPackageNames.push_back(pair.first);
+    }
+    std::sort(allPackageNames.begin(), allPackageNames.end());
+
+    outFile << "[";
+    for (size_t i = 0; i < allPackageNames.size(); ++i) {
+        // Check if the canonically ordered package name exists in the solution set.
+        bool found = solutionPackages.count(allPackageNames[i]);
+        outFile << (found ? "1" : "0") << (i == allPackageNames.size() - 1 ? "" : ", ");
+    }
+    outFile << "]" << std::endl;
+
+    // --- Dependencies Vector (Same logic) ---
+    std::unordered_set<std::string> solutionDependencies;
+    for (const auto& dep : bestBag->getDependencies()) {
+        solutionDependencies.insert(dep->getName());
+    }
+
+    std::vector<std::string> allDependencyNames;
+    allDependencyNames.reserve(allDependencies.size());
+    for (const auto& pair : allDependencies) {
+        allDependencyNames.push_back(pair.first);
+    }
+    std::sort(allDependencyNames.begin(), allDependencyNames.end());
+    
+    outFile << "[";
+    for (size_t i = 0; i < allDependencyNames.size(); ++i) {
+        bool found = solutionDependencies.count(allDependencyNames[i]);
+        outFile << (found ? "1" : "0") << (i == allDependencyNames.size() - 1 ? "" : ", ");
+    }
+    outFile << "]" << std::endl;
+
+    // (d) Metaheuristic parameters
+    outFile << "Metaheuristic Parameters: " << (bestBag->getMetaheuristicParameters().empty() ? "N/A" : bestBag->getMetaheuristicParameters()) << std::endl;
+
+    // (e) Random seed
+    outFile << "Random Seed: " << seed << std::endl;
+
+    // (f) Execution time
+    outFile << "Execution Time: " << std::fixed << std::setprecision(5) << bestBag->getAlgorithmTime() << " seconds" << std::endl;
+
+    outFile.close();
+    std::cout << "\nDetailed report saved to " << reportFileName << std::endl;
+}
+
+std::string KnapsackWindow::formatTimestampForFilename(std::string timestamp) {
+    std::replace(timestamp.begin(), timestamp.end(), ' ', '_');
+    std::replace(timestamp.begin(), timestamp.end(), ':', '_');
+    return timestamp;
 }
