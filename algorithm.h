@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <functional>
+#include <random>
 
 class Bag;
 class Package;
@@ -65,6 +66,7 @@ public:
      * @param maxTime A timeout in seconds for the `run` method to prevent excessive execution time.
      */
     explicit Algorithm(double maxTime);
+    explicit Algorithm(double maxTime, unsigned int seed);
 
     /**
      * @brief Executes the selected algorithm to find solutions for the package packing problem.
@@ -387,6 +389,7 @@ private:
 
     const double m_maxTime;       ///< A timeout in seconds for the `run` method.
     std::string m_timestamp = "0";///< A string identifier for a specific `run` execution.
+    std::mt19937 m_generator;
 };
 
 #endif // ALGORITHM_H
