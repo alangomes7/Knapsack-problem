@@ -45,20 +45,25 @@ void saveData(const std::vector<Bag*>& bags, const std::string& inputFileName);
 std::string getAlgorithmLabel(const Algorithm& algorithm, Algorithm::ALGORITHM_TYPE algo, 
     Algorithm::LOCAL_SEARCH ls = Algorithm::LOCAL_SEARCH::NONE);
 
-/**
- * @brief Saves a detailed report for the best solution found.
- *
- * @param bestBag A pointer to the Bag with the highest benefit.
- * @param allPackages A map of all available packages to generate the binary vector.
- * @param allDependencies A map of all available dependencies.
- * @param seed The random seed used for the experiment.
- * @param filePath The path to the original input file, used for naming the report.
- * @param timestamp The timestamp string to append to the report filename.
- */
-void saveReport(const Bag* bestBag, const std::unordered_map<std::string, 
-    Package*>& allPackages, const std::unordered_map<std::string, 
-    Dependency*>& allDependencies, unsigned int seed, const std::string& filePath, 
-    const std::string& timestamp);
+    /**
+     * @brief Saves a detailed report for the best solution found in a population.
+     *
+     * This function identifies the bag with the highest benefit from the provided vector
+     * and generates a detailed report file.
+     *
+     * @param bags A constant reference to a vector of pointers to Bag objects, representing the solution population.
+     * @param allPackages A map of all available packages, used to generate the binary solution vector.
+     * @param allDependencies A map of all available dependencies.
+     * @param seed The random seed used for the experiment.
+     * @param filePath The path to the original input file, used for naming the report.
+     * @param timestamp The timestamp string to append to the report filename.
+     */
+    void saveReport(const std::vector<Bag*>& bags, 
+                    const std::unordered_map<std::string, Package*>& allPackages, 
+                    const std::unordered_map<std::string, Dependency*>& allDependencies, 
+                    unsigned int seed, 
+                    const std::string& filePath, 
+                    const std::string& timestamp);
 
 /**
  * @brief Converts a timestamp string to a filename-friendly format.

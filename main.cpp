@@ -1,13 +1,17 @@
 #include "main.h"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 #include <vector>
 #include <string>
 #include <chrono>
 #include <iomanip>
 #include <algorithm>
 #include <limits>
+#include <unordered_set>
+
 #include "algorithm.h"
 #include "package.h"
 #include "dependency.h"
@@ -75,14 +79,7 @@ int main(int argc, char* argv[]) {
 
     printResults(bags);
     saveData(bags, filePath);
-
-    // Find the best bag to generate the report
-    if (!bags.empty()) {
-        auto bestBagIt = std::max_element(bags.begin(), bags.end(), [](const Bag* a, const Bag* b) {
-            return a->getBenefit() < b->getBenefit();
-        });
-        saveReport(*bestBagIt, availablePackages, availableDependencies, seed, filePath, timestamp);
-    }
+    saveReport(bags, availablePackages, availableDependencies, seed, filePath, timestamp);
 
     // Cleanup
     for (Bag* bag : bags) {
@@ -212,80 +209,76 @@ std::string getAlgorithmLabel(const Algorithm& algorithm, Algorithm::ALGORITHM_T
     return label;
 }
 
-void saveReport(const Bag* bestBag, const std::unordered_map<std::string, 
-    Package*>& allPackages, const std::unordered_map<std::string, 
-    Dependency*>& allDependencies, unsigned int seed, const std::string& filePath, 
-    const std::string& timestamp) {
-    if (!bestBag) return;
+void saveReport(const std::vector<Bag*>& bags,
+                                const std::unordered_map<std::string, Package*>& allPackages,
+                                const std::unordered_map<std::string, Dependency*>& allDependencies,
+                                unsigned int seed, const std::string& filePath,
+                                const std::string& timestamp) {
 
-    // --- Create a unique report filename with timestamp ---
-    std::string base_filename = filePath.substr(filePath.find_last_of("/\\") + 1);
-    // Remove the original extension to avoid names like "file.txt.txt"
-    size_t lastindex = base_filename.find_last_of(".");
-    std::string raw_name = base_filename.substr(0, lastindex);
+    // 1. Find the best bag to generate the report.
+    if (bags.empty()) {
+        std::cerr << "Error: Cannot generate report from an empty set of solutions." << std::endl;
+        return;
+    }
 
-    std::string path_directory = filePath.substr(0, filePath.find_last_of("/\\") + 1);
-    std::string reportFileName = path_directory + "report_" + raw_name + "_" + formatTimestampForFilename(timestamp) + "knapsack.txt";
-    // ---
+    auto bestBagIt = std::max_element(bags.begin(), bags.end(), [](const Bag* a, const Bag* b) {
+        return a->getBenefit() < b->getBenefit();
+    });
+    const Bag* bestBag = *bestBagIt;
 
+    // 2. Create a unique and robust report filename.
+    std::filesystem::path inputPath(filePath);
+    std::string directory = inputPath.parent_path().string();
+    std::string stem = inputPath.stem().string();
+    std::string reportFileName = directory + "/report_" + stem + "_" + formatTimestampForFilename(timestamp) + ".txt";
+
+    // 3. Write the report file.
     std::ofstream outFile(reportFileName);
-
     if (!outFile.is_open()) {
         std::cerr << "Error: Could not open " << reportFileName << " for writing." << std::endl;
         return;
     }
 
-    outFile << "--- Experiment Reproduction Report for " << base_filename << " ---" << std::endl;
+    outFile << "--- Experiment Reproduction Report for " << inputPath.filename().string() << " ---" << std::endl;
 
-    // Methaeuristic used
     Algorithm algorithmAux(0);
-    outFile << "Methaeuristic: " << algorithmAux.toString(bestBag->getBagAlgorithm()) + " | " + algorithmAux.toString(bestBag->getBagLocalSearch()) << std::endl;
-
-    // (a) Benefit value
+    outFile << "Methaeuristic: " << getAlgorithmLabel(algorithmAux, bestBag->getBagAlgorithm(), bestBag->getBagLocalSearch()) << std::endl;
     outFile << "Benefit Value: " << bestBag->getBenefit() << std::endl;
-
-    // (b) Total disk space
     outFile << "Total Disk Space (Dependencies): " << bestBag->getSize() << " MB" << std::endl;
-
-    // (c) Solution as binary vectors
     outFile << "Solution (Binary Vectors):" << std::endl;
-    // Packages vector
+
+    // --- Packages Vector ---
+    std::unordered_set<std::string> solutionPackages;
+    for (const auto& pkg : bestBag->getPackages()) {
+        solutionPackages.insert(pkg->getName());
+    }
+
     outFile << "[";
-    for (int i = 0; i < allPackages.size(); ++i) {
+    // CORRECTED: Iterate numerically to ensure correct order ("0", "1", "2", ... "10")
+    for (size_t i = 0; i < allPackages.size(); ++i) {
         std::string name = std::to_string(i);
-        bool found = false;
-        for (const auto& pkg : bestBag->getPackages()) {
-            if (pkg->getName() == name) {
-                found = true;
-                break;
-            }
-        }
+        bool found = solutionPackages.count(name);
         outFile << (found ? "1" : "0") << (i == allPackages.size() - 1 ? "" : ", ");
     }
     outFile << "]" << std::endl;
-    // Dependencies vector
+
+    // --- Dependencies Vector (Same corrected logic) ---
+    std::unordered_set<std::string> solutionDependencies;
+    for (const auto& dep : bestBag->getDependencies()) {
+        solutionDependencies.insert(dep->getName());
+    }
+    
     outFile << "[";
-    for (int i = 0; i < allDependencies.size(); ++i) {
+    // CORRECTED: Iterate numerically
+    for (size_t i = 0; i < allDependencies.size(); ++i) {
         std::string name = std::to_string(i);
-         bool found = false;
-        for (const auto& dep : bestBag->getDependencies()) {
-            if (dep->getName() == name) {
-                found = true;
-                break;
-            }
-        }
+        bool found = solutionDependencies.count(name);
         outFile << (found ? "1" : "0") << (i == allDependencies.size() - 1 ? "" : ", ");
     }
     outFile << "]" << std::endl;
 
-
-    // (d) Metaheuristic parameters
     outFile << "Metaheuristic Parameters: " << (bestBag->getMetaheuristicParameters().empty() ? "N/A" : bestBag->getMetaheuristicParameters()) << std::endl;
-
-    // (e) Random seed
     outFile << "Random Seed: " << seed << std::endl;
-
-    // (f) Execution time
     outFile << "Execution Time: " << std::fixed << std::setprecision(5) << bestBag->getAlgorithmTime() << " seconds" << std::endl;
 
     outFile.close();
