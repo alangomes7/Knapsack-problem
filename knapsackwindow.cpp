@@ -297,7 +297,9 @@ void KnapsackWindow::printBag(const std::string& algorithmName) {
         }
     }
 
-    if (!bagToPrint) return;
+    if (!bagToPrint){
+        bagToPrint = new Bag(Algorithm::ALGORITHM_TYPE::NONE, "0");
+    }
 
     ui->plainTextEdit_logs->clear();
     QString log_text = QString::fromStdString(bagToPrint->toString());
@@ -407,6 +409,8 @@ void KnapsackWindow::saveReport(const std::vector<Bag*>& bags,
     // (f) Execution time
     outFile << "Execution Time: " << std::fixed << std::setprecision(5) << bestBag->getAlgorithmTime() << " seconds" << std::endl;
 
+    // (g) Timestamp
+    outFile << "Timestamp: " << timestamp << std::endl;
     outFile.close();
     std::cout << "\nDetailed report saved to " << reportFileName << std::endl;
 }
