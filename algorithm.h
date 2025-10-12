@@ -10,6 +10,7 @@
 class Bag;
 class Package;
 class Dependency;
+class LocalSearch;
 
 /**
  * @brief Provides a collection of algorithms to solve the package dependency knapsack problem.

@@ -12,7 +12,7 @@
 
 VNS::VNS(double maxTime) : m_maxTime(maxTime) {}
 
-VNS::VNS(double maxTime, unsigned int seed) : m_maxTime(maxTime), m_generator(seed) {}
+VNS::VNS(double maxTime, unsigned int seed) : m_maxTime(maxTime), m_helper(seed) {}
 
 Bag* VNS::run(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages,
               Algorithm::LOCAL_SEARCH localSearchMethod,
@@ -34,8 +34,8 @@ Bag* VNS::run(int bagSize, Bag* initialBag, const std::vector<Package*>& allPack
         }
         
         Bag* shakenBag = shake(*bestBag, k, allPackages, bagSize * 2, dependencyGraph);
-        localSearch(*shakenBag, bagSize, allPackages, localSearchMethod, dependencyGraph);
-        removePackagesToFit(*shakenBag, bagSize, dependencyGraph);
+        m_localSearch.run(*shakenBag, bagSize, allPackages, localSearchMethod, dependencyGraph);
+        m_helper.removePackagesToFit(*shakenBag, bagSize, dependencyGraph);
 
         if (shakenBag->getBenefit() > bestBag->getBenefit()) {
             delete bestBag;
@@ -59,7 +59,7 @@ Bag* VNS::shake(const Bag& currentBag, int k, const std::vector<Package*>& allPa
     const auto& packagesInBag = newBag->getPackages();
 
     for (int i = 0; i < k && !packagesInBag.empty(); ++i) {
-        int offset = randomNumberInt(0, packagesInBag.size() - 1);
+        int offset = m_helper.randomNumberInt(0, packagesInBag.size() - 1);
         auto it = packagesInBag.begin();
         std::advance(it, offset);
         const Package* packageToRemove = *it;
@@ -77,7 +77,7 @@ Bag* VNS::shake(const Bag& currentBag, int k, const std::vector<Package*>& allPa
     }
 
     for (int i = 0; i < k && !packagesOutside.empty(); ++i) {
-        int index = randomNumberInt(0, packagesOutside.size() - 1);
+        int index = m_helper.randomNumberInt(0, packagesOutside.size() - 1);
         Package* packageToAdd = packagesOutside[index];
         const auto& deps = dependencyGraph.at(packageToAdd);
         if (newBag->canAddPackage(*packageToAdd, bagSize, deps)) {
@@ -86,203 +86,4 @@ Bag* VNS::shake(const Bag& currentBag, int k, const std::vector<Package*>& allPa
         packagesOutside.erase(packagesOutside.begin() + index);
     }
     return newBag;
-}
-
-bool VNS::localSearch(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages,
-                      Algorithm::LOCAL_SEARCH localSearchMethod,
-                      const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph) {
-    bool improved = false;
-    bool localOptimum = false;
-    while (!localOptimum) {
-        bool improvement_found_this_iteration = false;
-        switch (localSearchMethod) {
-            case Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT:
-                improvement_found_this_iteration = exploreSwapNeighborhoodBestImprovement(currentBag, bagSize, allPackages, dependencyGraph);
-                break;
-            case Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT:
-                improvement_found_this_iteration = exploreSwapNeighborhoodRandomImprovement(currentBag, bagSize, allPackages, dependencyGraph);
-                break;
-            default:
-                improvement_found_this_iteration = exploreSwapNeighborhoodFirstImprovement(currentBag, bagSize, allPackages, dependencyGraph);
-                break;
-        }
-
-        if (improvement_found_this_iteration) {
-            improved = true;
-        } else {
-            localOptimum = true;
-        }
-    }
-    return improved;
-}
-
-bool VNS::exploreSwapNeighborhoodFirstImprovement(
-    Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages,
-    const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
-{
-    const auto& packagesInBag = currentBag.getPackages();
-    if (packagesInBag.empty()) return false;
-
-    std::vector<Package*> packagesOutsideBag;
-    packagesOutsideBag.reserve(allPackages.size());
-    for (Package* p : allPackages) {
-        if (packagesInBag.count(p) == 0) packagesOutsideBag.push_back(p);
-    }
-    if (packagesOutsideBag.empty()) return false;
-
-    std::vector<const Package*> packagesInBagVec(packagesInBag.begin(), packagesInBag.end());
-    int currentBenefit = currentBag.getBenefit();
-    int delta;
-
-    for (const Package* packageIn : packagesInBagVec) {
-        for (Package* packageOut : packagesOutsideBag) {
-            if (evaluateSwap(currentBag, packageIn, packageOut, bagSize, currentBenefit, delta)) {
-                const auto& depsIn = dependencyGraph.at(packageIn);
-                currentBag.removePackage(*packageIn, depsIn);
-                const auto& depsOut = dependencyGraph.at(packageOut);
-                currentBag.addPackage(*packageOut, depsOut);
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool VNS::exploreSwapNeighborhoodBestImprovement(
-    Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages,
-    const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
-{
-    const auto& packagesInBag = currentBag.getPackages();
-    if (packagesInBag.empty()) return false;
-
-    std::vector<Package*> packagesOutsideBag;
-    packagesOutsideBag.reserve(allPackages.size());
-    for (Package* p : allPackages) {
-        if (packagesInBag.count(p) == 0) packagesOutsideBag.push_back(p);
-    }
-    if (packagesOutsideBag.empty()) return false;
-
-    std::vector<const Package*> packagesInBagVec(packagesInBag.begin(), packagesInBag.end());
-    int currentBenefit = currentBag.getBenefit();
-
-    const Package* bestPackageIn = nullptr;
-    Package* bestPackageOut = nullptr;
-    int maxBenefitIncrease = 0, delta = 0;
-
-    for (const Package* packageIn : packagesInBagVec) {
-        for (Package* packageOut : packagesOutsideBag) {
-            if (evaluateSwap(currentBag, packageIn, packageOut, bagSize, currentBenefit, delta)) {
-                if (delta > maxBenefitIncrease) {
-                    maxBenefitIncrease = delta;
-                    bestPackageIn = packageIn;
-                    bestPackageOut = packageOut;
-                }
-            }
-        }
-    }
-
-    if (bestPackageIn && bestPackageOut) {
-        const auto& depsIn = dependencyGraph.at(bestPackageIn);
-        currentBag.removePackage(*bestPackageIn, depsIn);
-        const auto& depsOut = dependencyGraph.at(bestPackageOut);
-        currentBag.addPackage(*bestPackageOut, depsOut);
-        return true;
-    }
-    return false;
-}
-
-bool VNS::exploreSwapNeighborhoodRandomImprovement(
-    Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages,
-    const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
-{
-    const auto& packagesInBag = currentBag.getPackages();
-    if (packagesInBag.empty()) return false;
-
-    std::vector<Package*> packagesOutsideBag;
-    packagesOutsideBag.reserve(allPackages.size());
-    for (Package* p : allPackages) {
-        if (packagesInBag.count(p) == 0) packagesOutsideBag.push_back(p);
-    }
-    if (packagesOutsideBag.empty()) return false;
-
-    std::vector<const Package*> packagesInBagVec(packagesInBag.begin(), packagesInBag.end());
-    int currentBenefit = currentBag.getBenefit();
-
-    const int numAttempts = std::min(200, (int)packagesInBagVec.size() * (int)packagesOutsideBag.size());
-    int improvingCount = 0, delta = 0;
-    Bag chosenNeighbor = currentBag;
-
-    for (int i = 0; i < numAttempts; ++i) {
-        const Package* packageIn = packagesInBagVec[randomNumberInt(0, (int)packagesInBagVec.size() - 1)];
-        Package* packageOut = packagesOutsideBag[randomNumberInt(0, (int)packagesOutsideBag.size() - 1)];
-
-        if (evaluateSwap(currentBag, packageIn, packageOut, bagSize, currentBenefit, delta)) {
-            improvingCount++;
-            if (randomNumberInt(1, improvingCount) == 1) {
-                Bag neighbor = currentBag;
-                const auto& depsIn = dependencyGraph.at(packageIn);
-                neighbor.removePackage(*packageIn, depsIn);
-                const auto& depsOut = dependencyGraph.at(packageOut);
-                neighbor.addPackage(*packageOut, depsOut);
-                chosenNeighbor = std::move(neighbor);
-            }
-        }
-    }
-
-    if (improvingCount > 0) {
-        currentBag = std::move(chosenNeighbor);
-        return true;
-    }
-    return false;
-}
-
-bool VNS::evaluateSwap(const Bag &currentBag, const Package *packageIn, Package *packageOut, int bagSize, int currentBenefit, int &benefitIncrease) const
-{
-    int newBenefit = currentBenefit - packageIn->getBenefit() + packageOut->getBenefit();
-    benefitIncrease = newBenefit - currentBenefit;
-
-    if (benefitIncrease <= 0) return false;
-
-    if (!currentBag.canSwap(*packageIn, *packageOut, bagSize)) return false;
-
-    return true;
-}
-
-bool VNS::removePackagesToFit(Bag& bag, int maxCapacity, const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph) {
-    while (bag.getSize() > maxCapacity) {
-        const auto& packagesInBag = bag.getPackages();
-        if (packagesInBag.empty()) return false;
-
-        const Package* worstPackageToRemove = nullptr;
-        double minRatio = std::numeric_limits<double>::max();
-
-        for (const Package* package : packagesInBag) {
-            int packageDependenciesSize = package->getDependenciesSize();
-            double ratio = (packageDependenciesSize <= 0) ?
-                           ((package->getBenefit() <= 0) ? -1.0 : std::numeric_limits<double>::max()) :
-                           static_cast<double>(package->getBenefit()) / packageDependenciesSize;
-
-            if (ratio < minRatio) {
-                minRatio = ratio;
-                worstPackageToRemove = package;
-            }
-        }
-
-        if (worstPackageToRemove) {
-            const auto& deps = dependencyGraph.at(worstPackageToRemove);
-            bag.removePackage(*worstPackageToRemove, deps);
-        } else {
-            return false;
-        }
-    }
-    return true;
-}
-
-int VNS::randomNumberInt(int min, int max)
-{
-    if (min > max) {
-        return min;
-    }
-    std::uniform_int_distribution<> distribution(min, max);
-    return distribution(m_generator);
 }

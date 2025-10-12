@@ -76,6 +76,11 @@ const std::string &Bag::getMetaheuristicParameters() const
     return m_metaheuristicParams;
 }
 
+void Bag::setTimestamp(const std::string &timestamp)
+{
+    m_timeStamp = timestamp;
+}
+
 void Bag::setAlgorithmTime(double seconds) {
     m_algorithmTimeSeconds = seconds;
 }

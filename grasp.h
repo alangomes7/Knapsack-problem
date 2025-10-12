@@ -6,6 +6,8 @@
 #include <unordered_map>
 
 #include "algorithm.h"
+#include "localsearch.h"
+#include "metaheuristichelper.h"
 
 // Forward
 class Bag;
@@ -37,17 +39,6 @@ private:
                       const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
                       double alpha);
 
-    bool localSearch(Bag& currentBag, int bagSize,
-                     const std::vector<Package*>& allPackages,
-                     Algorithm::LOCAL_SEARCH localSearchMethod,
-                     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph);
-
-    bool exploreSwapNeighborhoodBestImprovement(Bag& currentBag, int bagSize,
-                                                const std::vector<Package*>& allPackages,
-                                                const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph);
-
-    bool evaluateSwap(const Bag &currentBag, const Package *packageIn, Package *packageOut, int bagSize, int currentBenefit, int &benefitIncrease) const;
-
     // ILS helpers
     Bag* perturbSolution(const Bag& source, int bagSize,
                          const std::vector<Package*>& allPackages,
@@ -58,12 +49,9 @@ private:
     double pickAlpha();
     void updateAlphaRewards(double alpha, double improvement);
 
-    // Utility
-    int randomNumberInt(int min, int max);
-
     // Parameters & state
     const double m_maxTime;
-    std::mt19937 m_generator;
+    std::mt19937 m_generator; // Kept for std::discrete_distribution
 
     // ILS params
     int m_ilsRounds = 10;
@@ -74,6 +62,9 @@ private:
     std::vector<double> m_alphaProbs;    // selection probabilities
     std::vector<double> m_alphaScores;   // cumulative score / reward for each alpha
     std::vector<int>    m_alphaCounts;   // how many times each alpha used
+    
+    LocalSearch m_localSearch;
+    MetaheuristicHelper m_helper;
 };
 
 #endif // GRASP_H

@@ -9,6 +9,7 @@
 #include "bag.h"
 #include "package.h"
 #include "dependency.h"
+#include "localsearch.h"
 #include "vnd.h"
 #include "vns.h"
 #include "grasp.h"
@@ -50,11 +51,11 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,int bagSize
     }
 
     // Run metaheuristics using the best initial solution
-    // Run metaheuristics using the best initial solution
     if (bestInitialBag) {
         // Instantiate and run VND
         VND vnd(m_maxTime);
         Bag* vndBag = vnd.run(bagSize, bestInitialBag, packages, m_dependencyGraph);
+        vndBag->setTimestamp(m_timestamp);
         resultBag.push_back(vndBag);
 
         // Instantiate and run VNS for each local search method, seeding it from the main generator
@@ -68,7 +69,9 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,int bagSize
         
         // Instantiate and run GRASP
         GRASP grasp(m_maxTime, m_generator());
-        resultBag.push_back(grasp.run(bagSize, resultBag, packages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph));
+        Bag* graspBag = grasp.run(bagSize, resultBag, packages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
+        graspBag->setTimestamp(m_timestamp);
+        resultBag.push_back(graspBag);
     }
 
     return resultBag;

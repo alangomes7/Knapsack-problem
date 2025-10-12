@@ -1,13 +1,13 @@
 Algoritmo,File name,Timestamp,Tempo de Processamento (s),Pacotes,Depenências,Peso da mochila,Benefício mochila
-RANDOM,instancia_original.knapsack.txt,2025-10-12 11:57:27,0.00042,24,81,12124,7701
-GREEDY -> Package: Benefit Ratio,instancia_original.knapsack.txt,2025-10-12 11:57:27,0.00042,28,79,12085,9868
-GREEDY -> Package: Benefit,instancia_original.knapsack.txt,2025-10-12 11:57:27,0.00034,25,77,12105,9515
-GREEDY -> Package: Size,instancia_original.knapsack.txt,2025-10-12 11:57:27,0.00036,29,81,12171,8668
-RANDOM_GREEDY (Package: Benefit),instancia_original.knapsack.txt,2025-10-12 11:57:27,0.00035,24,78,12180,9105
-RANDOM_GREEDY (Package: Benefit Ratio),instancia_original.knapsack.txt,2025-10-12 11:57:27,0.00037,28,79,12131,9699
-RANDOM_GREEDY (Package: Size),instancia_original.knapsack.txt,2025-10-12 11:57:27,0.00039,27,81,12166,7432
-VND | Best Improvement,instancia_original.knapsack.txt,2025-10-12 11:57:27,0.00322,15,73,11800,7296
-VNS | First Improvement,instancia_original.knapsack.txt,2025-10-12 11:57:27,0.02496,28,81,12172,10929
-VNS | Best Improvement,instancia_original.knapsack.txt,2025-10-12 11:57:27,0.01489,28,80,12158,11021
-VNS | Random Improvement,instancia_original.knapsack.txt,2025-10-12 11:57:27,0.00492,28,79,12085,9868
-GRASP | Best Improvement,instancia_original.knapsack.txt,0,5.00109,33,82,12165,11541
+RANDOM,instancia_original.knapsack.txt,2025-10-12 13:00:33,0.00051,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instancia_original.knapsack.txt,2025-10-12 13:00:33,0.00042,28,79,12085,9868
+GREEDY -> Package: Benefit,instancia_original.knapsack.txt,2025-10-12 13:00:33,0.00038,25,77,12105,9515
+GREEDY -> Package: Size,instancia_original.knapsack.txt,2025-10-12 13:00:33,0.00041,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instancia_original.knapsack.txt,2025-10-12 13:00:33,0.00045,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instancia_original.knapsack.txt,2025-10-12 13:00:33,0.00048,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instancia_original.knapsack.txt,2025-10-12 13:00:33,0.00048,27,81,12166,7432
+VND | Best Improvement,instancia_original.knapsack.txt,2025-10-12 13:00:33,0.00852,15,73,11800,7296
+VNS | First Improvement,instancia_original.knapsack.txt,2025-10-12 13:00:33,0.02959,28,80,12158,11021
+VNS | Best Improvement,instancia_original.knapsack.txt,2025-10-12 13:00:33,0.02235,28,82,12175,10966
+VNS | Random Improvement,instancia_original.knapsack.txt,2025-10-12 13:00:33,0.00302,28,79,12085,9868
+GRASP | Best Improvement,instancia_original.knapsack.txt,2025-10-12 13:00:33,5.00567,33,82,12412,11541

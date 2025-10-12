@@ -31,6 +31,8 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         dependency.h dependency.cpp
         fileprocessor.h fileprocessor.cpp
         algorithm.h algorithm.cpp
+        localsearch.h localsearch.cpp
+        metaheuristichelper.h metaheuristichelper.cpp
         vnd.h vnd.cpp
         vns.h vns.cpp
         grasp.h grasp.cpp

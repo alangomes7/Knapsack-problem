@@ -92,6 +92,12 @@ public:
     const std::string& getMetaheuristicParameters() const;
 
     /**
+     * @brief Sets the bag's timestamp.
+     * @param timestamp The creation timestamp for the bag.
+     */
+    void setTimestamp(const std::string& timestamp);
+
+    /**
      * @brief Sets the execution time of the algorithm.
      * @param seconds The execution time in seconds.
      */

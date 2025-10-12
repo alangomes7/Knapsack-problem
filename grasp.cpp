@@ -23,7 +23,7 @@ GRASP::GRASP(double maxTime)
 }
 
 GRASP::GRASP(double maxTime, unsigned int seed)
-    : m_maxTime(maxTime), m_generator(seed)
+    : m_maxTime(maxTime), m_generator(seed), m_helper(seed)
 {
     m_alphas = {0.0, 0.1, 0.2, 0.3, 0.5};
     m_alphaProbs.assign(m_alphas.size(), 1.0 / m_alphas.size());
@@ -34,7 +34,7 @@ GRASP::GRASP(double maxTime, unsigned int seed)
 GRASP::GRASP(double maxTime, unsigned int seed,
              int ilsRounds, int perturbStrength,
              const std::vector<double>& reactiveAlphas)
-    : m_maxTime(maxTime), m_generator(seed),
+    : m_maxTime(maxTime), m_generator(seed), m_helper(seed),
       m_ilsRounds(ilsRounds), m_perturbStrength(perturbStrength),
       m_alphas(reactiveAlphas)
 {
@@ -46,16 +46,6 @@ GRASP::GRASP(double maxTime, unsigned int seed,
     m_alphaCounts.assign(m_alphas.size(), 0);
 }
 
-/**
- * Main run loop:
- * - While time remains:
- *     - pick alpha (reactive)
- *     - construct solution with alpha
- *     - local search
- *     - run ILS (perturb + local search several rounds)
- *     - update best solution
- *     - update reactive alpha rewards based on improvement produced by this alpha
- */
 Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
                 const std::vector<Package*>& allPackages,
                 Algorithm::LOCAL_SEARCH localSearchMethod,
@@ -78,7 +68,7 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
 
     // Loop while time remains
     while (clock::now() - start < maxDur) {
-        // 1️⃣ Select starting solution:
+        // 1 Select starting solution:
         //    Cycle through initialBags first, then random constructions afterward.
         static size_t initIndex = 0;
         Bag* candidate = nullptr;
@@ -95,14 +85,14 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
 
         int beforeLS = candidate->getBenefit();
 
-        // 2️⃣ Apply Local Search
-        localSearch(*candidate, bagSize, allPackages, localSearchMethod, dependencyGraph);
+        // 2 Apply Local Search
+        m_localSearch.run(*candidate, bagSize, allPackages, localSearchMethod, dependencyGraph);
 
-        // 3️⃣ Apply ILS improvement phase
+        // 3 Apply ILS improvement phase
         Bag* current = candidate;
         for (int r = 0; r < m_ilsRounds; ++r) {
             Bag* perturbed = perturbSolution(*current, bagSize, allPackages, dependencyGraph, m_perturbStrength);
-            localSearch(*perturbed, bagSize, allPackages, localSearchMethod, dependencyGraph);
+            m_localSearch.run(*perturbed, bagSize, allPackages, localSearchMethod, dependencyGraph);
 
             if (perturbed->getBenefit() > current->getBenefit()) {
                 delete current;
@@ -115,13 +105,13 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
                 break; // stop if time expired during ILS
         }
 
-        // 4️⃣ Update reactive α statistics (only if construction was used)
+        // 4 Update reactive a statistics (only if construction was used)
         if (!fromInitial) {
             double improvement = static_cast<double>(current->getBenefit() - beforeLS);
             updateAlphaRewards(m_alphas.front(), improvement); // optional: use the alpha used for this iteration
         }
 
-        // 5️⃣ Keep the best
+        // 5 Keep the best
         if (current->getBenefit() > bestBenefit) {
             delete bestBag;
             bestBag = current;
@@ -140,14 +130,6 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
     return bestBag;
 }
 
-/**
- * Construction with given alpha: compute score = benefit/weight,
- * create RCL by threshold: score >= best - alpha*(best-worst),
- * pick randomly from RCL. Always use dependencyGraph.find() safely.
- */
-/**
- * Faster construction: uses precomputed benefit/weight ratio and avoids full sorting.
- */
 Bag* GRASP::construction(int bagSize, const std::vector<Package*>& allPackages,
                          const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
                          double alpha)
@@ -181,7 +163,7 @@ Bag* GRASP::construction(int bagSize, const std::vector<Package*>& allPackages,
         }
 
         if (rcl.empty()) break;
-        Package* selected = rcl[randomNumberInt(0, (int)rcl.size() - 1)];
+        Package* selected = rcl[m_helper.randomNumberInt(0, (int)rcl.size() - 1)];
 
         const auto it = dependencyGraph.find(selected);
         const auto& deps = (it != dependencyGraph.end()) ? it->second : std::vector<const Dependency*>{};
@@ -197,89 +179,6 @@ Bag* GRASP::construction(int bagSize, const std::vector<Package*>& allPackages,
     return newBag;
 }
 
-/**
- * Local search: repeated best-improvement swap neighborhood until local optimum.
- */
-bool GRASP::localSearch(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages,
-                        Algorithm::LOCAL_SEARCH localSearchMethod,
-                        const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
-{
-    bool improvedAny = false;
-    bool stop = false;
-    while (!stop) {
-        bool found = false;
-        if (localSearchMethod == Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT) {
-            found = exploreSwapNeighborhoodBestImprovement(currentBag, bagSize, allPackages, dependencyGraph);
-        } else {
-            // If other local search methods exist, add here.
-            found = exploreSwapNeighborhoodBestImprovement(currentBag, bagSize, allPackages, dependencyGraph);
-        }
-
-        if (found) improvedAny = true;
-        else stop = true;
-    }
-    return improvedAny;
-}
-
-/**
- * Faster swap exploration — precompute feasible pairs, reuse benefit diffs.
- */
-bool GRASP::exploreSwapNeighborhoodBestImprovement(
-    Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages,
-    const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
-{
-    const auto& packagesInBag = currentBag.getPackages();
-    if (packagesInBag.empty()) return false;
-
-    std::vector<Package*> outside;
-    outside.reserve(allPackages.size());
-    for (Package* p : allPackages)
-        if (packagesInBag.count(p) == 0) outside.push_back(p);
-
-    int bestDelta = 0;
-    const Package* bestIn = nullptr;
-    Package* bestOut = nullptr;
-
-    for (const Package* pIn : packagesInBag) {
-        const int inBenefit = pIn->getBenefit();
-        for (Package* pOut : outside) {
-            const int delta = pOut->getBenefit() - inBenefit;
-            if (delta <= bestDelta) continue; // skip if no chance of improvement
-            if (!currentBag.canSwap(*pIn, *pOut, bagSize)) continue;
-            bestDelta = delta;
-            bestIn = pIn;
-            bestOut = pOut;
-        }
-    }
-
-    if (!bestIn || !bestOut) return false;
-
-    const auto itIn = dependencyGraph.find(bestIn);
-    const auto& depsIn = (itIn != dependencyGraph.end()) ? itIn->second : std::vector<const Dependency*>{};
-    currentBag.removePackage(*bestIn, depsIn);
-
-    const auto itOut = dependencyGraph.find(bestOut);
-    const auto& depsOut = (itOut != dependencyGraph.end()) ? itOut->second : std::vector<const Dependency*>{};
-    currentBag.addPackage(*bestOut, depsOut);
-
-    return true;
-}
-
-/**
- * Evaluate swap: ensure swap improves benefit and is feasible capacity-wise (calls bag.canSwap)
- */
-bool GRASP::evaluateSwap(const Bag &currentBag, const Package *packageIn, Package *packageOut, int bagSize, int currentBenefit, int &benefitIncrease) const
-{
-    benefitIncrease = packageOut->getBenefit() - packageIn->getBenefit();
-    if (benefitIncrease <= 0) return false;
-    // rely on bag's feasibility check for dependencies and capacity
-    return currentBag.canSwap(*packageIn, *packageOut, bagSize);
-}
-
-/**
- * Perturbation: remove up to removeCount packages randomly (respecting dependency constraints would require more logic),
- * then attempt to refill with a limited construction (small alpha).
- */
 Bag* GRASP::perturbSolution(const Bag& source, int bagSize,
                             const std::vector<Package*>& allPackages,
                             const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
@@ -292,12 +191,12 @@ Bag* GRASP::perturbSolution(const Bag& source, int bagSize,
     std::vector<const Package*> inBagVec(pert->getPackages().begin(), pert->getPackages().end());
     if (inBagVec.empty()) return pert;
 
-    // remove up to removeCount random packages (preferably random distinct)
+    // remove up to removeCount random packages
     int toRemove = std::min(removeCount, (int)inBagVec.size());
-    std::uniform_int_distribution<> dist(0, int(inBagVec.size() - 1));
 
     for (int i = 0; i < toRemove; ++i) {
-        int idx = dist(m_generator);
+        if (inBagVec.empty()) break;
+        int idx = m_helper.randomNumberInt(0, (int)inBagVec.size() - 1);
         const Package* p = inBagVec[idx];
 
         auto it = dependencyGraph.find(p);
@@ -309,8 +208,6 @@ Bag* GRASP::perturbSolution(const Bag& source, int bagSize,
         // remove from vector (swap/pop)
         std::swap(inBagVec[idx], inBagVec.back());
         inBagVec.pop_back();
-        if (inBagVec.empty()) break;
-        dist = std::uniform_int_distribution<>(0, int(inBagVec.size() - 1));
     }
 
     // small reconstruction: limited greedy-random filling with small alpha
@@ -341,7 +238,7 @@ Bag* GRASP::perturbSolution(const Bag& source, int bagSize,
             else break;
         }
         if (rcl.empty()) break;
-        Package* pick = rcl[randomNumberInt(0, (int)rcl.size() - 1)];
+        Package* pick = rcl[m_helper.randomNumberInt(0, (int)rcl.size() - 1)];
         auto it = dependencyGraph.find(pick);
         const std::vector<const Dependency*> deps = (it != dependencyGraph.end()) ? it->second : std::vector<const Dependency*>{};
         if (pert->canAddPackage(*pick, bagSize, deps)) pert->addPackage(*pick, deps);
@@ -353,9 +250,6 @@ Bag* GRASP::perturbSolution(const Bag& source, int bagSize,
     return pert;
 }
 
-/**
- * Choose an alpha index according to m_alphaProbs (categorical distribution)
- */
 double GRASP::pickAlpha()
 {
     // create categorical distribution
@@ -365,10 +259,6 @@ double GRASP::pickAlpha()
     return m_alphas[idx];
 }
 
-/**
- * Update alpha rewards using a simple incremental average: score += improvement
- * then update probabilities by normalizing scores (with small epsilon).
- */
 void GRASP::updateAlphaRewards(double alpha, double improvement)
 {
     // find index
@@ -394,14 +284,4 @@ void GRASP::updateAlphaRewards(double alpha, double improvement)
     } else {
         for (size_t i = 0; i < m_alphaProbs.size(); ++i) m_alphaProbs[i] = values[i] / total;
     }
-}
-
-/**
- * Utility random integer in [min, max]
- */
-int GRASP::randomNumberInt(int min, int max)
-{
-    if (min >= max) return min;
-    std::uniform_int_distribution<> dist(min, max);
-    return dist(m_generator);
 }
