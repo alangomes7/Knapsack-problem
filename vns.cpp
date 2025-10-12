@@ -34,8 +34,8 @@ Bag* VNS::run(int bagSize, Bag* initialBag, const std::vector<Package*>& allPack
         }
         
         Bag* shakenBag = shake(*bestBag, k, allPackages, bagSize * 2, dependencyGraph);
-        m_localSearch.run(*shakenBag, bagSize, allPackages, localSearchMethod, dependencyGraph);
-        m_helper.removePackagesToFit(*shakenBag, bagSize, dependencyGraph);
+        m_localSearch.run(*shakenBag, bagSize, allPackages, localSearchMethod, dependencyGraph, 200);
+        m_helper.makeItFeasible(*shakenBag, bagSize, dependencyGraph);
 
         if (shakenBag->getBenefit() > bestBag->getBenefit()) {
             delete bestBag;

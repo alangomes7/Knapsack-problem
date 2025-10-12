@@ -69,7 +69,7 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,int bagSize
         
         // Instantiate and run GRASP
         GRASP grasp(m_maxTime, m_generator());
-        Bag* graspBag = grasp.run(bagSize, resultBag, packages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
+        Bag* graspBag = grasp.run(bagSize, {vndBag, vnsBestBag}, packages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
         graspBag->setTimestamp(m_timestamp);
         resultBag.push_back(graspBag);
     }

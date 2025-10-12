@@ -161,6 +161,21 @@ public:
     bool canSwap(const Package& packageIn, const Package& packageOut, int bagSize) const;
 
     /**
+     * @brief Checks if swapping two packages would be feasible without modifying the bag's internal state.
+     *
+     * This method performs a pure, read-only feasibility check to determine whether removing one package
+     * and adding another would keep the total weight within the bag's size limit. Unlike `canSwap()`,
+     * this function guarantees thread safety by avoiding any internal mutations or dependency updates,
+     * making it suitable for use in parallel evaluations.
+     *
+     * @param packageIn The package that would be removed from the bag.
+     * @param packageOut The package that would be added to the bag.
+     * @param bagSize The maximum capacity of the bag.
+     * @return True if the swap is feasible under the bag's size constraint, false otherwise.
+     */
+    bool canSwapReadOnly(const Package& packageIn, const Package& packageOut, int bagSize) const noexcept;
+
+    /**
      * @brief Generates a formatted string summarizing the bag's contents and statistics.
      * @return A string containing details like algorithm, size, benefit, time, and package list.
      */

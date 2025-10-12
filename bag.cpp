@@ -192,6 +192,15 @@ bool Bag::canSwap(const Package& packageIn, const Package& packageOut, int bagSi
     return (m_size + sizeChange) <= bagSize;
 }
 
+bool Bag::canSwapReadOnly(const Package& packageIn, const Package& packageOut, int bagSize) const noexcept
+{
+    // Compute the net weight if we remove one package and add another.
+    const int newWeight = m_size - packageIn.getDependenciesSize() + packageOut.getDependenciesSize();
+
+    // Feasible only if it stays within bag capacity.
+    return newWeight <= bagSize && newWeight >= 0;
+}
+
 std::string Bag::toString() const {
     Algorithm algoHelper(0);
     std::string bagString;

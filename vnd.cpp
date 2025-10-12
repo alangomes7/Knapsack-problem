@@ -25,8 +25,8 @@ Bag* VND::run(int bagSize, Bag* initialBag, const std::vector<Package*>& allPack
             break;
         }
 
-        improved = m_localSearch.run(*bestBag, bagSize * 1.5, allPackages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, dependencyGraph);
-        m_helper.removePackagesToFit(*bestBag, bagSize, dependencyGraph);
+        improved = m_localSearch.run(*bestBag, bagSize * 1.5, allPackages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, dependencyGraph, 200);
+        m_helper.makeItFeasible(*bestBag, bagSize, dependencyGraph);
     }
     
     auto end_time = std::chrono::high_resolution_clock::now();
