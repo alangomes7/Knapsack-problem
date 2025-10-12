@@ -30,7 +30,8 @@ public:
         RANDOM_GREEDY_Package_Benefit_Ratio,
         RANDOM_GREEDY_Package_Size,
         VND,
-        VNS
+        VNS,
+        GRASP
     };
 
     enum class LOCAL_SEARCH {

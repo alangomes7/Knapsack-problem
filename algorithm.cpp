@@ -11,6 +11,7 @@
 #include "dependency.h"
 #include "vnd.h"
 #include "vns.h"
+#include "grasp.h"
 
 Algorithm::Algorithm(double maxTime)
     : m_maxTime(maxTime) {
@@ -30,7 +31,7 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,int bagSize
     m_timestamp = timestamp;
     precomputeDependencyGraph(packages, dependencies);
     std::vector<Bag*> resultBag;
-    resultBag.reserve(10);
+    resultBag.reserve(11);
     
     resultBag.push_back(randomBag(bagSize, packages, dependencies));
     std::vector<Bag*> bagsGreedy = greedyBag(bagSize, packages, dependencies);
@@ -49,16 +50,25 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,int bagSize
     }
 
     // Run metaheuristics using the best initial solution
+    // Run metaheuristics using the best initial solution
     if (bestInitialBag) {
         // Instantiate and run VND
         VND vnd(m_maxTime);
-        resultBag.push_back(vnd.run(bagSize, bestInitialBag, packages, m_dependencyGraph));
+        Bag* vndBag = vnd.run(bagSize, bestInitialBag, packages, m_dependencyGraph);
+        resultBag.push_back(vndBag);
 
         // Instantiate and run VNS for each local search method, seeding it from the main generator
         VNS vns(m_maxTime, m_generator()); 
-        resultBag.push_back(vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::FIRST_IMPROVEMENT, m_dependencyGraph));
-        resultBag.push_back(vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph));
-        resultBag.push_back(vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT, m_dependencyGraph));
+        Bag* vnsFirstBag = vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::FIRST_IMPROVEMENT, m_dependencyGraph);
+        Bag* vnsBestBag = vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
+        Bag* vnsRandomBag = vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT, m_dependencyGraph);
+        resultBag.push_back(vnsFirstBag);
+        resultBag.push_back(vnsBestBag);
+        resultBag.push_back(vnsRandomBag);
+        
+        // Instantiate and run GRASP
+        GRASP grasp(m_maxTime, m_generator());
+        resultBag.push_back(grasp.run(bagSize, resultBag, packages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph));
     }
 
     return resultBag;
@@ -75,6 +85,7 @@ std::string Algorithm::toString(Algorithm::ALGORITHM_TYPE algorithm) const {
         case Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Size: return "RANDOM_GREEDY (Package: Size)";
         case Algorithm::ALGORITHM_TYPE::VND: return "VND";
         case Algorithm::ALGORITHM_TYPE::VNS: return "VNS";
+        case Algorithm::ALGORITHM_TYPE::GRASP: return "GRASP";
         default: return "NONE";
     }
 }

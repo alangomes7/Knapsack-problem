@@ -16,7 +16,11 @@ class Algorithm;
  *
  * VND is a local search method that systematically explores a predefined neighborhood
  * structure to find improved solutions. This implementation uses a swap neighborhood
- * and a best-improvement strategy.
+ * and a best-improvement strategy. The algorithm attempts to improve a given 
+ * initial solution by iteratively searching for better solutions in its 
+ * neighborhood. If a better solution is found, it replaces the current solution and 
+ * the search continues from there. If no better solution is found in the current 
+ * neighborhood, the algorithm terminates, having found a local optimum.
  */
 class VND {
 public:
@@ -29,9 +33,14 @@ public:
     /**
      * @brief Executes the VND algorithm to improve an initial solution.
      * @param bagSize The maximum capacity of the bag.
-     * @param initialBag The starting solution to improve upon.
-     * @param allPackages A list of all available packages for neighborhood generation.
-     * @param dependencyGraph A pre-computed graph for efficient dependency lookups.
+     * @param initialBag The starting solution to improve upon. The VND algorithm 
+     * will not modify this bag, but will use it as a starting point for its search.
+     * @param allPackages A list of all available packages for neighborhood generation. 
+     * This list is used to find packages that are not currently in the bag and 
+     * could potentially be swapped with packages that are in the bag.
+     * @param dependencyGraph A pre-computed graph for efficient dependency lookups. 
+     * This graph is used to quickly find the dependencies of a package, which is 
+     * necessary to calculate the size of the bag after a swap.
      * @return A pointer to a new `Bag` object with the improved solution. Caller owns the memory.
      */
     Bag* run(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages,
@@ -40,7 +49,7 @@ public:
 private:
     /**
      * @brief Explores the swap neighborhood and applies the best found improvement.
-     * @param currentBag The solution to be improved.
+     * @param currentBag The solution to be improved. This bag is modified in place.
      * @param bagSize The maximum capacity of the bag.
      * @param allPackages A list of all available packages.
      * @param dependencyGraph A pre-computed graph for efficient dependency lookups.
