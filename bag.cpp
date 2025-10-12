@@ -14,15 +14,26 @@ Bag::Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp)
       m_localSearch(Algorithm::LOCAL_SEARCH::NONE) {
 }
 
-Bag::Bag(const std::vector<Package*>& packages)
+Bag::Bag(const std::vector<Package*>& packages,
+         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
     : m_bagAlgorithm(Algorithm::ALGORITHM_TYPE::NONE),
       m_size(0),
-      m_benefit(0), // Init cached benefit
+      m_benefit(0),
       m_algorithmTimeSeconds(0.0),
       m_localSearch(Algorithm::LOCAL_SEARCH::NONE) {
-    for (const auto* pkg : packages) {
+
+    // Iterate through the list of packages to add
+    for (const Package* pkg : packages) {
         if (pkg) {
-            this->addPackage(*pkg);
+            // Find the package's dependencies in the precomputed graph (fast lookup)
+            auto it = dependencyGraph.find(pkg);
+
+            // Ensure the package exists in the graph to prevent errors
+            if (it != dependencyGraph.end()) {
+                // Correctly call the fast addPackage method with the cached dependency vector.
+                // `it->second` is the std::vector<const Dependency*>&
+                addPackage(*pkg, it->second);
+            }
         }
     }
 }
@@ -80,24 +91,25 @@ void Bag::setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm) {
 void Bag::setMetaheuristicParameters(const std::string &params)
 {
     m_metaheuristicParams = params;
-
 }
 
-bool Bag::addPackage(const Package& package) {
-    auto result = m_baggedPackages.insert(&package);
-    if (!result.second) {
+bool Bag::addPackage(const Package& package, const std::vector<const Dependency*>& dependencies) {
+    // Attempt to insert the package. If it's already there, `second` will be false.
+    auto [_, inserted] = m_baggedPackages.insert(&package);
+    if (!inserted) {
         return false; // Package was already in the bag.
     }
 
-    // OPTIMIZATION: Update benefit cache.
     m_benefit += package.getBenefit();
 
-    // OPTIMIZATION: Use reference counting for dependencies.
-    for (const auto& pair : package.getDependencies()) {
-        const Dependency* dep = pair.second;
-        m_dependencyRefCount[dep]++;
-        if (m_dependencyRefCount[dep] == 1) {
-            // This is a new dependency for the bag.
+    for (const Dependency* dep : dependencies) {
+        // OPTIMIZATION: Perform one lookup. `operator[]` finds or creates the element.
+        // We then increment its reference count.
+        auto& ref_count = m_dependencyRefCount[dep];
+        ref_count++;
+
+        // If the count is 1, it's a new dependency for the bag.
+        if (ref_count == 1) {
             m_size += dep->getSize();
             m_baggedDependencies.insert(dep);
         }
@@ -105,34 +117,40 @@ bool Bag::addPackage(const Package& package) {
     return true;
 }
 
-void Bag::removePackage(const Package& package) {
+void Bag::removePackage(const Package& package, const std::vector<const Dependency*>& dependencies) {
+    // Only proceed if the package was actually in the bag.
     if (m_baggedPackages.erase(&package) == 0) {
-        return; // Package was not in the bag.
+        return; // Package was not found, nothing to do.
     }
 
-    // OPTIMIZATION: Update benefit cache.
     m_benefit -= package.getBenefit();
 
-    // OPTIMIZATION: Decrement reference counts and update size if a dependency is no longer needed.
-    for (const auto& pair : package.getDependencies()) {
-        const Dependency* dep = pair.second;
-        m_dependencyRefCount[dep]--;
-        if (m_dependencyRefCount[dep] == 0) {
-            // This dependency is no longer required by any package.
-            m_size -= dep->getSize();
-            m_dependencyRefCount.erase(dep);
-            m_baggedDependencies.erase(dep);
+    for (const Dependency* dep : dependencies) {
+        // OPTIMIZATION: Use `find` to get an iterator with a single lookup.
+        auto it = m_dependencyRefCount.find(dep);
+        
+        // This check ensures we don't try to operate on a non-existent dependency.
+        if (it != m_dependencyRefCount.end()) {
+            // Decrement the reference count.
+            it->second--;
+
+            // If the count drops to zero, remove the dependency completely.
+            if (it->second == 0) {
+                m_size -= dep->getSize();
+                // OPTIMIZATION: Erase using the iterator is faster than erasing by key.
+                m_dependencyRefCount.erase(it);
+                m_baggedDependencies.erase(dep);
+            }
         }
     }
 }
 
-bool Bag::canAddPackage(const Package& package, int maxCapacity) const {
+bool Bag::canAddPackage(const Package& package, int maxCapacity, const std::vector<const Dependency*>& dependencies) const {
     int potentialSizeIncrease = 0;
-    // OPTIMIZATION: Calculate size increase by checking against the ref count map.
-    for (const auto& pair : package.getDependencies()) {
-        const Dependency* dependency = pair.second;
-        if (m_dependencyRefCount.find(dependency) == m_dependencyRefCount.end()) {
-            // If the dependency is not in our map, it's a new dependency.
+    for (const Dependency* dependency : dependencies) {
+        // OPTIMIZATION: Using `count` or `find` is the most direct way to check for existence.
+        // `count` can be more readable. It's an O(1) operation on average.
+        if (m_dependencyRefCount.count(dependency) == 0) {
             potentialSizeIncrease += dependency->getSize();
         }
     }
@@ -140,14 +158,15 @@ bool Bag::canAddPackage(const Package& package, int maxCapacity) const {
 }
 
 bool Bag::canSwap(const Package& packageIn, const Package& packageOut, int bagSize) const {
-    // OPTIMIZATION: Fast, accurate check using reference counting.
+    // This function's logic is already quite efficient, relying on single lookups
+    // for dependency checks. No major changes are needed here.
     int sizeChange = 0;
 
     // Calculate size increase from the incoming package's dependencies.
     for (const auto& pair : packageOut.getDependencies()) {
         const Dependency* dep = pair.second;
         // If the dependency is not already in the bag, its full size is added.
-        if (m_dependencyRefCount.find(dep) == m_dependencyRefCount.end()) {
+        if (m_dependencyRefCount.count(dep) == 0) {
             sizeChange += dep->getSize();
         }
     }
@@ -155,10 +174,13 @@ bool Bag::canSwap(const Package& packageIn, const Package& packageOut, int bagSi
     // Calculate size decrease from the outgoing package's dependencies.
     for (const auto& pair : packageIn.getDependencies()) {
         const Dependency* dep = pair.second;
-        // If the dependency is only required by the package we are swapping out,
-        // its full size will be removed.
-        if (m_dependencyRefCount.at(dep) == 1) {
-            sizeChange -= dep->getSize();
+        auto it = m_dependencyRefCount.find(dep);
+        if (it != m_dependencyRefCount.end()) {
+            // If the dependency is only required by the package we are swapping out,
+            // its full size will be removed.
+            if (it->second == 1) {
+                sizeChange -= dep->getSize();
+            }
         }
     }
 

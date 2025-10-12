@@ -494,3 +494,245 @@ VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 09:44:21,0.00
 VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 09:44:21,0.01748,28,82,12175,10966
 VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 09:44:21,0.01504,28,80,12158,11021
 VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 09:44:21,0.00278,28,79,12085,9868
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:02:29,0.00054,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:02:29,0.00045,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:02:29,0.00043,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:02:29,0.00049,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:02:29,0.00070,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:02:29,0.00058,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:02:29,0.00055,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:02:29,0.00349,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:02:29,0.01282,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:02:29,0.01467,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:02:29,0.00898,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:02:47,0.00054,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:02:47,0.00063,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:02:47,0.00047,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:02:47,0.00044,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:02:47,0.00044,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:02:47,0.00045,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:02:47,0.00046,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:02:47,0.00356,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:02:47,0.01220,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:02:47,0.01505,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:02:47,0.00915,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:02:51,0.00057,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:02:51,0.00043,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:02:51,0.00042,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:02:51,0.00043,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:02:51,0.00044,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:02:51,0.00044,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:02:51,0.00045,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:02:51,0.00376,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:02:51,0.01212,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:02:51,0.01485,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:02:51,0.00945,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:02:59,0.00057,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:02:59,0.00060,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:02:59,0.00047,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:02:59,0.00047,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:02:59,0.00049,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:02:59,0.00048,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:02:59,0.00049,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:02:59,0.00410,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:02:59,0.01401,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:02:59,0.01786,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:02:59,0.01320,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00064,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00055,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00054,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00054,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00056,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00056,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00057,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00451,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01571,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01894,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01200,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00066,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00056,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00054,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00055,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00057,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00057,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00058,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00456,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01979,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.02034,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01634,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00069,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00057,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00055,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00057,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00059,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00059,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00059,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00467,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01600,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01921,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01191,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00065,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00055,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00054,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00054,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00056,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00056,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00056,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00454,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01605,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01862,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01165,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00089,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00056,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00054,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00057,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00062,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00057,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:00,0.00057,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.00469,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01596,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.02031,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:00,0.01228,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00069,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00099,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00065,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00055,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:01,0.00057,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:01,0.00057,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:01,0.00057,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00447,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.01606,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.01913,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.01232,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00068,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00055,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00053,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00056,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:01,0.00055,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:01,0.00054,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:01,0.00056,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00450,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.01520,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.01785,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.01122,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00060,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00050,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00049,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00050,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:01,0.00052,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:01,0.00052,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:01,0.00051,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.00475,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.01575,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.01878,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:01,0.01098,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00059,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00050,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00051,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00051,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00051,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00052,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00051,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00413,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01408,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01694,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01265,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00076,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00051,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00052,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00060,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00053,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00055,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00054,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00424,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01564,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.02370,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01206,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00065,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00060,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00055,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00056,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00058,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00056,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00061,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00447,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01644,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01864,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01167,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00069,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00057,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00059,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00055,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00056,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00057,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00056,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00463,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01579,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01885,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01188,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00062,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00053,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00052,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00053,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00055,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00054,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:02,0.00055,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.00476,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01561,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01816,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:02,0.01134,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00064,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00132,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00098,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00054,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00055,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00056,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00055,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00523,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01659,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01924,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01173,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00073,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00055,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00052,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00056,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00057,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00054,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00055,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00446,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01524,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01825,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01140,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00063,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00053,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00054,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00052,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00053,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00055,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00053,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00430,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01515,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01848,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01128,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00062,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00050,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00049,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00049,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00060,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00060,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-10 10:03:03,0.00054,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.00409,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01480,28,78,12172,10619
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01697,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-10 10:03:03,0.01064,28,80,12110,10899
+RANDOM,instância_original.knapsack.txt,2025-10-12 08:57:28,0.00034,24,81,12124,7701
+GREEDY -> Package: Benefit Ratio,instância_original.knapsack.txt,2025-10-12 08:57:28,0.00030,28,79,12085,9868
+GREEDY -> Package: Benefit,instância_original.knapsack.txt,2025-10-12 08:57:28,0.00026,25,77,12105,9515
+GREEDY -> Package: Size,instância_original.knapsack.txt,2025-10-12 08:57:28,0.00029,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),instância_original.knapsack.txt,2025-10-12 08:57:28,0.00030,24,78,12180,9105
+RANDOM_GREEDY (Package: Benefit Ratio),instância_original.knapsack.txt,2025-10-12 08:57:28,0.00031,28,79,12131,9699
+RANDOM_GREEDY (Package: Size),instância_original.knapsack.txt,2025-10-12 08:57:28,0.00033,27,81,12166,7432
+VND | Best Improvement,instância_original.knapsack.txt,2025-10-12 08:57:28,0.00314,15,73,11800,7296
+VNS | First Improvement,instância_original.knapsack.txt,2025-10-12 08:57:28,0.01478,28,81,12172,10929
+VNS | Best Improvement,instância_original.knapsack.txt,2025-10-12 08:57:28,0.01219,28,80,12158,11021
+VNS | Random Improvement,instância_original.knapsack.txt,2025-10-12 08:57:28,0.00305,28,79,12085,9868

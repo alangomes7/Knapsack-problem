@@ -5,6 +5,7 @@
 #include "package.h"
 #include "dependency.h"
 #include "algorithm.h"
+class Algorithm;
 
 #include <QMainWindow>
 #include <QString>

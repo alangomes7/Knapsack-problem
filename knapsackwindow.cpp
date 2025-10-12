@@ -16,8 +16,6 @@
 #include <sstream>
 #include <random>
 
-#include "algorithm.h"
-
 KnapsackWindow::KnapsackWindow(QWidget *parent)
     : QMainWindow(parent),
       ui(new Ui::KnapsackWindow),
