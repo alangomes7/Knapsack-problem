@@ -3,7 +3,9 @@
 
 Package::Package(const std::string& name, int benefit)
     : m_name(name),
-      m_benefit(benefit) {
+      m_benefit(benefit),
+      m_dependenciesSize(0),
+      m_dependenciesSizeCached(false) {
     // No explicit body needed as members are initialized in the initializer list.
 }
 
@@ -17,12 +19,16 @@ int Package::getBenefit() const {
 
 int Package::getDependenciesSize() const
 {
-    int dependenciesSize = 0;
-    
-    for (const auto& pair : m_dependencies) {
-        dependenciesSize += pair.second->getSize();
+    if (m_dependenciesSizeCached) {
+        return m_dependenciesSize;
     }
-    return dependenciesSize;
+
+    m_dependenciesSize = 0;
+    for (const auto& pair : m_dependencies) {
+        m_dependenciesSize += pair.second->getSize();
+    }
+    m_dependenciesSizeCached = true;
+    return m_dependenciesSize;
 }
 
 std::unordered_map<std::string, Dependency*>& Package::getDependencies() {
@@ -35,6 +41,7 @@ const std::unordered_map<std::string, Dependency*>& Package::getDependencies() c
 
 void Package::addDependency(Dependency& dependency) {
     m_dependencies[dependency.getName()] = &dependency;
+    m_dependenciesSizeCached = false; // Invalidate cache
 }
 
 bool Package::hasDependency(const Dependency *dependency) const

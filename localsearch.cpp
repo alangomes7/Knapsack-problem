@@ -11,6 +11,7 @@
 #include "bag.h"
 #include "package.h"
 #include "dependency.h"
+#include "MetaheuristicHelper.h"
 
 bool LocalSearch::run(
     Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages,
@@ -20,62 +21,62 @@ bool LocalSearch::run(
 {
     bool improvementFoundInIteration = true;
     int iterationsWithoutImprovement = 0;
-    
+
     // Pre-allocate vector for packages outside the bag to avoid repeated allocations
     std::vector<Package*> packagesOutsideBag;
     packagesOutsideBag.reserve(allPackages.size());
 
     while (improvementFoundInIteration && iterationsWithoutImprovement < maxIterations) {
         improvementFoundInIteration = false;
+        int benefitBeforeIteration = currentBag.getBenefit();
 
         // Rebuild the list of packages outside the bag once per iteration
         buildOutsidePackages(currentBag.getPackages(), allPackages, packagesOutsideBag);
 
         // --- Phase 1: Try adding a package ---
-        // This is a greedy move to quickly improve the solution.
         if (tryAddPackage(currentBag, bagSize, packagesOutsideBag, dependencyGraph)) {
-            improvementFoundInIteration = true;
-            iterationsWithoutImprovement = 0;
-            continue; // Restart the loop to try adding again
+            if (currentBag.getBenefit() > benefitBeforeIteration) {
+                improvementFoundInIteration = true;
+            }
         }
 
-        // --- Phase 2: Try swapping packages (the core of the local search) ---
-        bool swapFound = false;
-        switch (localSearchMethod) {
-            case Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT:
-                swapFound = exploreSwapNeighborhoodBestImprovement(
-                    currentBag, bagSize, allPackages, dependencyGraph);
-                break;
-            case Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT:
-                swapFound = exploreSwapNeighborhoodRandomImprovement(
-                    currentBag, bagSize, allPackages, dependencyGraph);
-                break;
-            default: // First Improvement
-                swapFound = exploreSwapNeighborhoodFirstImprovement(
-                    currentBag, bagSize, allPackages, dependencyGraph);
-                break;
-        }
-
-        if (swapFound) {
-            improvementFoundInIteration = true;
-            iterationsWithoutImprovement = 0;
-            continue; // Restart loop after a successful swap
-        }
-
-        // --- Phase 3: Try removing a package (last resort) ---
-        // This move is intended to escape a local optimum by freeing up space.
-        if (tryRemovePackage(currentBag, dependencyGraph)) {
-            improvementFoundInIteration = true; // A move was made, even if benefit decreased
-            iterationsWithoutImprovement = 0;
-            continue;
-        }
-
-        // If no move was made in this iteration, increment the counter.
+        // --- Phase 2: Try swapping packages ---
         if (!improvementFoundInIteration) {
+            bool swapFound = false;
+            switch (localSearchMethod) {
+                case Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT:
+                    swapFound = exploreSwapNeighborhoodBestImprovement(
+                        currentBag, bagSize, allPackages, dependencyGraph);
+                    break;
+                case Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT:
+                    swapFound = exploreSwapNeighborhoodRandomImprovement(
+                        currentBag, bagSize, allPackages, dependencyGraph);
+                    break;
+                default: // First Improvement
+                    swapFound = exploreSwapNeighborhoodFirstImprovement(
+                        currentBag, bagSize, allPackages, dependencyGraph);
+                    break;
+            }
+            if (swapFound && currentBag.getBenefit() > benefitBeforeIteration) {
+                improvementFoundInIteration = true;
+            }
+        }
+
+        // --- Phase 3: Try removing a package (only if it improves the situation) ---
+        if (!improvementFoundInIteration) {
+            if (tryRemovePackage(currentBag, dependencyGraph)) {
+                 if (currentBag.getBenefit() > benefitBeforeIteration) {
+                    improvementFoundInIteration = true;
+                }
+            }
+        }
+
+        if (improvementFoundInIteration) {
+            iterationsWithoutImprovement = 0;
+        } else {
             ++iterationsWithoutImprovement;
         }
     }
-    // The loop now maintains feasibility, so no final "makeItFeasible" call is needed.
     return iterationsWithoutImprovement < maxIterations;
 }
 
@@ -117,19 +118,19 @@ bool LocalSearch::tryRemovePackage(
 {
     const auto& packages = currentBag.getPackages();
     if (packages.empty()) return false;
-    
+
     const Package* worstPackage = nullptr;
     double worstRatio = std::numeric_limits<double>::max();
-    
+
     // Find the package with the worst benefit/size ratio to remove.
     for (const Package* p : packages) {
         double ratio = static_cast<double>(p->getBenefit()) / (p->getDependenciesSize() + 1);
         if (ratio < worstRatio) {
             worstRatio = ratio;
             worstPackage = p;
-        } 
+        }
     }
-    
+
     if (worstPackage) {
         // FIX: Removed the check `if (currentBag.getBenefit() >= currentBenefit)`.
         // The goal of removal is to free up space to escape a local optimum.
@@ -138,7 +139,7 @@ bool LocalSearch::tryRemovePackage(
         currentBag.removePackage(*worstPackage, deps);
         return true;
     }
-    
+
     return false;
 }
 
@@ -186,12 +187,12 @@ bool LocalSearch::exploreSwapNeighborhoodFirstImprovement(
         for (Package* packageOut : packagesOutsideBag) {
             // Only consider swaps that improve the benefit
             if (packageOut->getBenefit() <= packageIn->getBenefit()) break;
-            
-            // FIX: Feasibility is checked by canSwap before the move is made.
-            if (currentBag.canSwap(*packageIn, *packageOut, bagSize)) {
+
+            // Use the faster read-only feasibility check
+            if (currentBag.canSwapReadOnly(*packageIn, *packageOut, bagSize)) {
                 const auto& depsIn = dependencyGraph.at(packageIn);
                 const auto& depsOut = dependencyGraph.at(packageOut);
-                
+
                 // Perform the swap directly. The solution remains feasible.
                 currentBag.removePackage(*packageIn, depsIn);
                 currentBag.addPackage(*packageOut, depsOut);
@@ -214,9 +215,9 @@ bool LocalSearch::exploreSwapNeighborhoodRandomImprovement(
     if (packagesOutsideBag.empty()) return false;
 
     std::vector<const Package*> packagesInVec(packagesInBag.begin(), packagesInBag.end());
-    
+
     thread_local std::mt19937 gen(std::random_device{}());
-    
+
     const int nIn = static_cast<int>(packagesInVec.size());
     const int nOut = static_cast<int>(packagesOutsideBag.size());
     const int maxTries = std::min(500, nIn * nOut);
@@ -230,11 +231,11 @@ bool LocalSearch::exploreSwapNeighborhoodRandomImprovement(
 
         if (packageOut->getBenefit() <= packageIn->getBenefit()) continue;
 
-        // FIX: Check feasibility first.
-        if (currentBag.canSwap(*packageIn, *packageOut, bagSize)) {
+        // Use the faster read-only feasibility check
+        if (currentBag.canSwapReadOnly(*packageIn, *packageOut, bagSize)) {
             const auto& depsIn = dependencyGraph.at(packageIn);
             const auto& depsOut = dependencyGraph.at(packageOut);
-            
+
             currentBag.removePackage(*packageIn, depsIn);
             currentBag.addPackage(*packageOut, depsOut);
             return true;
@@ -279,8 +280,8 @@ bool LocalSearch::exploreSwapNeighborhoodBestImprovement(
                 // by this thread, skip the expensive feasibility check.
                 if (currentDelta <= localBestSwap.delta) continue;
 
-                // FIX: Check for feasibility before considering it the best swap.
-                if (currentBag.canSwap(*packageIn, *packageOut, bagSize)) {
+                // Use the faster read-only feasibility check
+                if (currentBag.canSwapReadOnly(*packageIn, *packageOut, bagSize)) {
                     localBestSwap = {currentDelta, packageIn, packageOut};
                 }
             }

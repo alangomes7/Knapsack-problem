@@ -86,7 +86,7 @@ public:
 
     /**
      * @brief Creates a string representation of the Package object.
-     *  Generates a detailed, human-readable string representation of the
+     * Generates a detailed, human-readable string representation of the
      * package, including its name, benefit, and a list of its dependencies.
      *
      * Useful for logging or debugging purposes.
@@ -97,6 +97,8 @@ public:
 private:
     std::string m_name;
     int m_benefit;
+    mutable int m_dependenciesSize; ///< Cached dependency size.
+    mutable bool m_dependenciesSizeCached; ///< Flag to check if size is cached.
 
     /**
      * @brief A map of dependencies required by this package, keyed by dependency name.
