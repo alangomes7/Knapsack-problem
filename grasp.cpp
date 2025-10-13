@@ -74,6 +74,7 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
     // Initialize best from initialBags if any
     if (!initialBags.empty()) {
         bestBag = new Bag(*initialBags.front());
+        m_helper.makeItFeasible(*bestBag, bagSize, dependencyGraph);
         bestBenefit = bestBag->getBenefit();
         // Add initial bags to elite set
         for (auto* bag : initialBags) {
@@ -87,8 +88,8 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
 
     // ILS params
     if (m_ilsRounds == 0){
-        m_ilsRounds = std::max(3, static_cast<int>(allPackages.size() / 3));
-        m_perturbStrength = std::max(2, static_cast<int>(allPackages.size() * 0.4));
+        m_ilsRounds = std::max(3, static_cast<int>(allPackages.size()));
+        m_perturbStrength = std::max(2, static_cast<int>(allPackages.size() * 1.75));
     }
 
     int iterationsSinceImprovement = 0;
@@ -128,7 +129,7 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
 
         // 2 Apply Local Search with adaptive intensity
         int lsIterations = (iterationsSinceImprovement > maxNoImprovement) ? 
-                          m_ilsRounds * 2 : m_ilsRounds; // Intensification
+                          m_ilsRounds * 1.3 : m_ilsRounds; // Intensification
         m_localSearch.run(*candidate, bagSize, allPackages, localSearchMethod, dependencyGraph, lsIterations);
 
         // 3 Apply ILS improvement phase with adaptive perturbation
@@ -138,7 +139,7 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
             int adaptivePerturbStrength = m_perturbStrength + m_helper.randomNumberInt(-20, 20);
             adaptivePerturbStrength = std::max(1, std::min(adaptivePerturbStrength, static_cast<int>(allPackages.size() * 0.9)));
             
-            Bag* perturbed = perturbSolution(*current, bagSize, allPackages, dependencyGraph, adaptivePerturbStrength);
+            Bag* perturbed = perturbSolution(*current, bagSize * 1.3, allPackages, dependencyGraph, adaptivePerturbStrength);
             m_localSearch.run(*perturbed, bagSize, allPackages, localSearchMethod, dependencyGraph, 300);
 
             if (perturbed->getBenefit() > current->getBenefit()) {

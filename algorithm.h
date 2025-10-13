@@ -7,6 +7,8 @@
 #include <functional>
 #include <random>
 
+#include "MetaheuristicHelper.h"
+
 class Bag;
 class Package;
 class Dependency;
@@ -86,6 +88,7 @@ private:
     const double m_maxTime;
     std::string m_timestamp = "0";
     std::mt19937 m_generator;
+    MetaheuristicHelper m_metaheuristicHelper;
 };
 
 #endif // ALGORITHM_H

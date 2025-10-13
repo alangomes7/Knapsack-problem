@@ -117,7 +117,8 @@
         "qmainwindow": "cpp",
         "random": "cpp",
         "coroutine": "cpp",
-        "resumable": "cpp"
+        "resumable": "cpp",
+        "execution": "cpp"
     },
 
     // ------------------------------------------------------------------------

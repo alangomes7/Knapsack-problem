@@ -10,16 +10,19 @@
 #include "package.h"
 #include "dependency.h"
 #include "localsearch.h"
+#include "MetaheuristicHelper.h"
 #include "vnd.h"
 #include "vns.h"
 #include "grasp.h"
 
 Algorithm::Algorithm(double maxTime)
-    : m_maxTime(maxTime) {
+    : m_maxTime(maxTime), m_metaheuristicHelper()
+{
+    
 }
 
 Algorithm::Algorithm(double maxTime, unsigned int seed)
-    : m_maxTime(maxTime), m_generator(seed)
+    : m_maxTime(maxTime), m_generator(seed), m_metaheuristicHelper(seed)
 {
 }
 
@@ -211,7 +214,8 @@ Bag* Algorithm::fillBagWithStrategy(int bagSize, std::vector<Package*>& packages
             break; 
         }
 
-        if (canPackageBeAdded(*bag, *packageToAdd, bagSize, compatibilityCache)) {
+        if (canPackageBeAdded(*bag, *packageToAdd, bagSize * 1.7, compatibilityCache)) {
+            m_metaheuristicHelper.makeItFeasible(*bag, bagSize, m_dependencyGraph);
             const auto& deps = m_dependencyGraph.at(packageToAdd);
             bag->addPackage(*packageToAdd, deps);
         }
