@@ -5,7 +5,7 @@
 #include <random>
 #include <unordered_map>
 #include "algorithm.h"
-#include "localSearch.h"
+#include "searchEngine.h"
 #include "metaheuristicHelper.h"
 
 // Forward declarations
@@ -64,7 +64,7 @@ private:
                const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph);
     
     const double m_maxTime; ///< Timeout in seconds.
-    LocalSearch m_localSearch;
+    SearchEngine m_searchEngine;
     MetaheuristicHelper m_helper;
 };
 

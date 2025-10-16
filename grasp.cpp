@@ -13,7 +13,7 @@
 #include <cmath>
 
 GRASP::GRASP(double maxTime)
-    : m_maxTime(maxTime), m_generator(std::random_device{}())
+    : m_maxTime(maxTime), m_generator(std::random_device{}()), m_iteratedLocalSearch(0), m_helper()
 {
     // default reactive alphas - wider range for better exploration
     m_alphas = {0.0, 0.15, 0.3, 0.5, 0.7, 0.75, 8, 8.5};
@@ -27,7 +27,7 @@ GRASP::GRASP(double maxTime)
 }
 
 GRASP::GRASP(double maxTime, unsigned int seed)
-    : m_maxTime(maxTime), m_generator(seed), m_helper(seed)
+    : m_maxTime(maxTime), m_generator(seed), m_iteratedLocalSearch(seed), m_helper(seed)
 {
     m_alphas = {0.0, 0.15, 0.3, 0.5, 0.7};
     m_alphaProbs.assign(m_alphas.size(), 1.0 / m_alphas.size());
@@ -42,7 +42,7 @@ GRASP::GRASP(double maxTime, unsigned int seed)
 GRASP::GRASP(double maxTime, unsigned int seed,
              int ilsRounds, int perturbStrength,
              const std::vector<double>& reactiveAlphas)
-    : m_maxTime(maxTime), m_generator(seed), m_helper(seed),
+    : m_maxTime(maxTime), m_generator(seed), m_iteratedLocalSearch(seed), m_helper(seed),
       m_ilsRounds(ilsRounds), m_perturbStrength(perturbStrength),
       m_alphas(reactiveAlphas)
 {
@@ -128,9 +128,9 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
         int beforeLS = candidate->getBenefit();
 
         // 2 Apply Local Search with adaptive intensity
-        int lsIterations = (iterationsSinceImprovement > maxNoImprovement) ? 
+        int lsIterations = (iterationsSinceImprovement > maxNoImprovement) ?
                           m_ilsRounds * 1.3 : m_ilsRounds; // Intensification
-        m_localSearch.run(*candidate, bagSize, allPackages, localSearchMethod, dependencyGraph, lsIterations);
+        //m_iteratedLocalSearch.run(*candidate, bagSize * 1.3, allPackages, localSearchMethod, dependencyGraph, lsIterations);
 
         // 3 Apply ILS improvement phase with adaptive perturbation
         Bag* current = candidate;
@@ -140,7 +140,7 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
             adaptivePerturbStrength = std::max(1, std::min(adaptivePerturbStrength, static_cast<int>(allPackages.size() * 0.9)));
             
             Bag* perturbed = perturbSolution(*current, bagSize * 1.3, allPackages, dependencyGraph, adaptivePerturbStrength);
-            m_localSearch.run(*perturbed, bagSize, allPackages, localSearchMethod, dependencyGraph, 300);
+            //m_iteratedLocalSearch.run(*perturbed, bagSize, allPackages, localSearchMethod, dependencyGraph, 300);
 
             if (perturbed->getBenefit() > current->getBenefit()) {
                 delete current;
@@ -154,7 +154,7 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
         }
 
         // 4 Path Relinking with elite set
-        if (m_usePathRelinking && !eliteSet.empty() && 
+        if (m_usePathRelinking && !eliteSet.empty() &&
             (totalIterations % 5 == 0) && // Apply every 5 iterations
             (clock::now() - start < maxDur * 0.9)) { // Don't use in final phase
             
@@ -209,7 +209,7 @@ Bag* GRASP::run(int bagSize, const std::vector<Bag*>& initialBags,
     for (auto* bag : eliteSet) {
         delete bag;
     }
-
+    m_helper.makeItFeasible(*bestBag, bagSize, dependencyGraph);
     bestBag->setBagAlgorithm(Algorithm::ALGORITHM_TYPE::GRASP);
     bestBag->setLocalSearch(localSearchMethod);
     bestBag->setAlgorithmTime(std::chrono::duration<double>(clock::now() - start).count());
@@ -307,7 +307,7 @@ Bag* GRASP::perturbSolution(const Bag& source, int bagSize,
     for (int i = 0; i < lowBenefitRemove && i < sortedByBenefit.size(); ++i) {
         const Package* p = sortedByBenefit[i];
         auto it = dependencyGraph.find(p);
-        const std::vector<const Dependency*> deps = (it != dependencyGraph.end()) ? 
+        const std::vector<const Dependency*> deps = (it != dependencyGraph.end()) ?
                                                      it->second : std::vector<const Dependency*>{};
         pert->removePackage(*p, deps);
         inBagVec.erase(std::remove(inBagVec.begin(), inBagVec.end(), p), inBagVec.end());
@@ -318,7 +318,7 @@ Bag* GRASP::perturbSolution(const Bag& source, int bagSize,
         int idx = m_helper.randomNumberInt(0, (int)inBagVec.size() - 1);
         const Package* p = inBagVec[idx];
         auto it = dependencyGraph.find(p);
-        const std::vector<const Dependency*> deps = (it != dependencyGraph.end()) ? 
+        const std::vector<const Dependency*> deps = (it != dependencyGraph.end()) ?
                                                      it->second : std::vector<const Dependency*>{};
         pert->removePackage(*p, deps);
         std::swap(inBagVec[idx], inBagVec.back());
@@ -356,7 +356,7 @@ Bag* GRASP::perturbSolution(const Bag& source, int bagSize,
         
         Package* pick = rcl[m_helper.randomNumberInt(0, (int)rcl.size() - 1)];
         auto it = dependencyGraph.find(pick);
-        const std::vector<const Dependency*> deps = (it != dependencyGraph.end()) ? 
+        const std::vector<const Dependency*> deps = (it != dependencyGraph.end()) ?
                                                      it->second : std::vector<const Dependency*>{};
         if (pert->canAddPackage(*pick, bagSize, deps)) {
             pert->addPackage(*pick, deps);
@@ -397,7 +397,7 @@ Bag* GRASP::pathRelink(const Bag& source, const Bag& target, int bagSize,
         if (step < toRemove.size()) {
             const Package* p = toRemove[step];
             auto it = dependencyGraph.find(p);
-            const std::vector<const Dependency*> deps = (it != dependencyGraph.end()) ? 
+            const std::vector<const Dependency*> deps = (it != dependencyGraph.end()) ?
                                                          it->second : std::vector<const Dependency*>{};
             current->removePackage(*p, deps);
         }
@@ -406,7 +406,7 @@ Bag* GRASP::pathRelink(const Bag& source, const Bag& target, int bagSize,
         if (step < toAdd.size()) {
             const Package* p = toAdd[step];
             auto it = dependencyGraph.find(p);
-            const std::vector<const Dependency*> deps = (it != dependencyGraph.end()) ? 
+            const std::vector<const Dependency*> deps = (it != dependencyGraph.end()) ?
                                                          it->second : std::vector<const Dependency*>{};
             if (current->canAddPackage(*p, bagSize, deps)) {
                 current->addPackage(*p, deps);

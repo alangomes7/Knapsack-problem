@@ -31,8 +31,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         dependency.h dependency.cpp
         fileprocessor.h fileprocessor.cpp
         algorithm.h algorithm.cpp
-        localSearch.h localSearch.cpp
-        MetaheuristicHelper.h MetaheuristicHelper.cpp
+        searchStrategies.h searchStrategies.cpp
+        searchEngine.h searchEngine.cpp
+        metaheuristicHelper.h metaheuristicHelper.cpp
         vnd.h vnd.cpp
         vns.h vns.cpp
         grasp.h grasp.cpp

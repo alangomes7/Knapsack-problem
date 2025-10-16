@@ -9,7 +9,8 @@
 #include "bag.h"
 #include "package.h"
 #include "dependency.h"
-#include "localsearch.h"
+#include "SearchStrategies.h"
+#include "searchEngine.h"
 #include "MetaheuristicHelper.h"
 #include "vnd.h"
 #include "vns.h"
@@ -18,7 +19,6 @@
 Algorithm::Algorithm(double maxTime)
     : m_maxTime(maxTime), m_metaheuristicHelper()
 {
-    
 }
 
 Algorithm::Algorithm(double maxTime, unsigned int seed)
@@ -26,59 +26,82 @@ Algorithm::Algorithm(double maxTime, unsigned int seed)
 {
 }
 
-// Executes all strategies
-std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,int bagSize,
-                       const std::vector<Package *> &packages,
-                       const std::vector<Dependency *> &dependencies,
-                       const std::string& timestamp)
+// =============================================================
+// == Main Control: Executes all strategies (construct + improve)
+// =============================================================
+std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,
+                                 int bagSize,
+                                 const std::vector<Package*>& packages,
+                                 const std::vector<Dependency*>& dependencies,
+                                 const std::string& timestamp)
 {
     m_timestamp = timestamp;
+
+    // Precompute dependencies once
     precomputeDependencyGraph(packages, dependencies);
+
+    // Create the strategy manager (constructive phase)
+    SearchStrategies strategies(
+        m_maxTime,
+        m_generator,              // share RNG
+        m_metaheuristicHelper,    // share helper
+        m_dependencyGraph,        // dependency map
+        m_timestamp
+    );
+
     std::vector<Bag*> resultBag;
-    resultBag.reserve(11);
-    
-    resultBag.push_back(randomBag(bagSize, packages, dependencies));
-    std::vector<Bag*> bagsGreedy = greedyBag(bagSize, packages, dependencies);
-    std::vector<Bag*> bagsRandomGreedy = randomGreedy(bagSize, packages, dependencies);
+    resultBag.reserve(10);
 
-    resultBag.insert(resultBag.end(), bagsGreedy.begin(), bagsGreedy.end());
-    resultBag.insert(resultBag.end(), bagsRandomGreedy.begin(), bagsRandomGreedy.end());
+    // === Constructive Phase ===
+    resultBag.push_back(strategies.randomBag(bagSize, packages));
+    auto greedyBags = strategies.greedyBag(bagSize, packages);
+    auto randomGreedyBags = strategies.randomGreedy(bagSize, packages);
 
+    resultBag.insert(resultBag.end(), greedyBags.begin(), greedyBags.end());
+    resultBag.insert(resultBag.end(), randomGreedyBags.begin(), randomGreedyBags.end());
+
+    // === Select best initial bag ===
     Bag* bestInitialBag = nullptr;
     int bestInitialBenefit = -1;
-    for (Bag* b : resultBag) {
-        if (b->getBenefit() > bestInitialBenefit) {
-            bestInitialBenefit = b->getBenefit();
-            bestInitialBag = b;
+    for (Bag* bag : resultBag) {
+        if (bag->getBenefit() > bestInitialBenefit) {
+            bestInitialBenefit = bag->getBenefit();
+            bestInitialBag = bag;
         }
     }
 
-    // Run metaheuristics using the best initial solution
+    // === Improvement Phase (Metaheuristics) ===
     if (bestInitialBag) {
-        // Instantiate and run VND
-        VND vnd(m_maxTime);
-        Bag* vndBag = vnd.run(bagSize, bestInitialBag, packages, m_dependencyGraph);
+        // VND
+        VND vnd(m_maxTime, m_generator());
+        std::vector<Algorithm::LOCAL_SEARCH> neighborhoods = {LOCAL_SEARCH::FIRST_IMPROVEMENT, LOCAL_SEARCH::RANDOM_IMPROVEMENT, LOCAL_SEARCH::BEST_IMPROVEMENT};
+        Bag* vndBag = vnd.run(bagSize, bestInitialBag, packages, neighborhoods, m_dependencyGraph);
         vndBag->setTimestamp(m_timestamp);
         resultBag.push_back(vndBag);
 
-        // Instantiate and run VNS for each local search method, seeding it from the main generator
-        VNS vns(m_maxTime, m_generator()); 
+        // VNS (3 local search types)
+        VNS vns(m_maxTime, m_generator());
         Bag* vnsFirstBag = vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::FIRST_IMPROVEMENT, m_dependencyGraph);
         Bag* vnsBestBag = vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
         Bag* vnsRandomBag = vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT, m_dependencyGraph);
         resultBag.push_back(vnsFirstBag);
         resultBag.push_back(vnsBestBag);
         resultBag.push_back(vnsRandomBag);
-        
-        // Instantiate and run GRASP
-        GRASP grasp(m_maxTime, m_generator());
-        Bag* graspBag = grasp.run(bagSize, {vndBag, vnsBestBag}, packages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
-        graspBag->setTimestamp(m_timestamp);
-        resultBag.push_back(graspBag);
+
+        // GRASP (combines best previous results)
+        // GRASP grasp(m_maxTime, m_generator());
+        // Bag* graspBag = grasp.run(bagSize, {vndBag, vnsBestBag}, packages,
+        //                           Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
+        // graspBag->setTimestamp(m_timestamp);
+        // resultBag.push_back(graspBag);
     }
 
     return resultBag;
 }
+
+// =============================================================
+// == String Conversions
+// =============================================================
 
 std::string Algorithm::toString(Algorithm::ALGORITHM_TYPE algorithm) const {
     switch (algorithm) {
@@ -96,8 +119,7 @@ std::string Algorithm::toString(Algorithm::ALGORITHM_TYPE algorithm) const {
     }
 }
 
-std::string Algorithm::toString(Algorithm::LOCAL_SEARCH localSearch) const
-{
+std::string Algorithm::toString(Algorithm::LOCAL_SEARCH localSearch) const {
     switch (localSearch) {
         case Algorithm::LOCAL_SEARCH::FIRST_IMPROVEMENT: return "First Improvement";
         case Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT: return "Best Improvement";
@@ -106,164 +128,9 @@ std::string Algorithm::toString(Algorithm::LOCAL_SEARCH localSearch) const
     }
 }
 
-// ===================================================================
-// == Private Algorithm Implementations
-// ===================================================================
-
-Bag* Algorithm::randomBag(int bagSize, const std::vector<Package*>& packages,
-                          const std::vector<Dependency*>& dependencies) {
-    auto mutablePackages = packages;
-    auto pickStrategy = [&](std::vector<Package*>& pkgs) {
-        return this->pickRandomPackage(pkgs);
-    };
-    return fillBagWithStrategy(bagSize, mutablePackages, pickStrategy, Algorithm::ALGORITHM_TYPE::RANDOM);
-}
-
-std::vector<Bag *> Algorithm::greedyBag(int bagSize, const std::vector<Package *> &packages,
-                                        const std::vector<Dependency *> &dependencies)
-{
-    std::vector<Bag*> bags;
-    bags.reserve(3);
-    
-    std::vector<Package *> sortedByRatio = sortedPackagesByBenefitToSizeRatio(packages);
-    std::vector<Package *> sortedByBenefit = sortedPackagesByBenefit(packages);
-    std::vector<Package *> sortedBySize = sortedPackagesBySize(packages);
-
-    auto pickStrategy = [&](std::vector<Package*>& pkgs) {
-        return this->pickTopPackage(pkgs);
-    };
-
-    bags.push_back(fillBagWithStrategy(bagSize, sortedByRatio, pickStrategy, Algorithm::ALGORITHM_TYPE::GREEDY_Package_Benefit_Ratio));
-    bags.push_back(fillBagWithStrategy(bagSize, sortedByBenefit, pickStrategy, Algorithm::ALGORITHM_TYPE::GREEDY_Package_Benefit));
-    bags.push_back(fillBagWithStrategy(bagSize, sortedBySize, pickStrategy, Algorithm::ALGORITHM_TYPE::GREEDY_Package_Size));
-    return bags;
-}
-
-std::vector<Bag*> Algorithm::randomGreedy(int bagSize, const std::vector<Package*>& packages,
-                                          const std::vector<Dependency*>& dependencies) {
-    std::vector<Bag*> bags;
-    bags.reserve(3);
-    
-    std::vector<Package *> sortedByRatio = sortedPackagesByBenefitToSizeRatio(packages);
-    std::vector<Package *> sortedByBenefit = sortedPackagesByBenefit(packages);
-    std::vector<Package *> sortedBySize = sortedPackagesBySize(packages);
-
-    auto pickStrategy = [&](std::vector<Package*>& pkgs) {
-        const int candidatePoolSize = 10;
-        return this->pickSemiRandomPackage(pkgs, candidatePoolSize);
-    };
-
-    bags.push_back(fillBagWithStrategy(bagSize, sortedByBenefit, pickStrategy, Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit));
-    bags.push_back(fillBagWithStrategy(bagSize, sortedByRatio, pickStrategy, Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit_Ratio));
-    bags.push_back(fillBagWithStrategy(bagSize, sortedBySize, pickStrategy, Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Size));
-    return bags;
-}
-
-// ===================================================================
-// == Core Logic and Utilities
-// ===================================================================
-
-Package* Algorithm::pickRandomPackage(std::vector<Package*>& packageList) {
-    if (packageList.empty()) {
-        return nullptr;
-    }
-    int index = randomNumberInt(0, packageList.size() - 1);
-    Package* pickedPackage = packageList[index];
-    packageList.erase(packageList.begin() + index);
-    return pickedPackage;
-}
-
-Package* Algorithm::pickTopPackage(std::vector<Package*>& packageList) {
-    if (packageList.empty()) {
-        return nullptr;
-    }
-    Package* pickedPackage = packageList.front();
-    packageList.erase(packageList.begin());
-    return pickedPackage;
-}
-
-Package* Algorithm::pickSemiRandomPackage(std::vector<Package*>& packageList, int poolSize) {
-    if (packageList.empty()) {
-        return nullptr;
-    }
-    int candidatePoolSize = std::min(poolSize, static_cast<int>(packageList.size()));
-    int index = randomNumberInt(0, candidatePoolSize - 1);
-    Package* pickedPackage = packageList[index];
-    packageList.erase(packageList.begin() + index);
-    return pickedPackage;
-}
-
-Bag* Algorithm::fillBagWithStrategy(int bagSize, std::vector<Package*>& packages,
-                                      std::function<Package*(std::vector<Package*>&)> pickStrategy,
-                                      Algorithm::ALGORITHM_TYPE type) {
-    auto bag = new Bag(type, m_timestamp);
-    if (packages.empty()) {
-        return bag;
-    }
-
-    auto compatibilityCache = std::unordered_map<const Package*, bool>();
-    auto start_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> max_duration_seconds(m_maxTime);
-    
-    while (!packages.empty()) {
-        if (std::chrono::high_resolution_clock::now() - start_time > max_duration_seconds) {
-            break;
-        }
-        Package* packageToAdd = pickStrategy(packages);
-        if (!packageToAdd) {
-            break; 
-        }
-
-        if (canPackageBeAdded(*bag, *packageToAdd, bagSize * 1.7, compatibilityCache)) {
-            m_metaheuristicHelper.makeItFeasible(*bag, bagSize, m_dependencyGraph);
-            const auto& deps = m_dependencyGraph.at(packageToAdd);
-            bag->addPackage(*packageToAdd, deps);
-        }
-    }
-
-    auto end_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
-    bag->setAlgorithmTime(elapsed_seconds.count());
-    return bag;
-}
-
-
-std::vector<Package *> Algorithm::sortedPackagesByBenefit(const std::vector<Package *> &packages)
-{
-    auto sortedList = packages;
-    std::sort(sortedList.begin(), sortedList.end(), [](const Package* a, const Package* b) {
-        return a->getBenefit() > b->getBenefit();
-    });
-    return sortedList;
-}
-
-std::vector<Package*> Algorithm::sortedPackagesByBenefitToSizeRatio(const std::vector<Package*>& packages) {
-    auto sortedList = packages;
-    std::sort(sortedList.begin(), sortedList.end(), [](const Package* a, const Package* b) {
-        double ratio_a = (a->getDependenciesSize() > 0) ? static_cast<double>(a->getBenefit()) / a->getDependenciesSize() : a->getBenefit();
-        double ratio_b = (b->getDependenciesSize() > 0) ? static_cast<double>(b->getBenefit()) / b->getDependenciesSize() : b->getBenefit();
-        return ratio_a > ratio_b;
-    });
-    return sortedList;
-}
-
-std::vector<Package*> Algorithm::sortedPackagesBySize(const std::vector<Package*>& packages) {
-    auto sortedList = packages;
-    std::sort(sortedList.begin(), sortedList.end(), [](const Package* a, const Package* b) {
-        return a->getDependenciesSize() < b->getDependenciesSize();
-    });
-    return sortedList;
-}
-
-int Algorithm::randomNumberInt(int min, int max)
-{
-    if (min > max) {
-        return min;
-    }
-    std::uniform_int_distribution<> distribution(min, max);
-    return distribution(m_generator);
-}
-
+// =============================================================
+// == Dependency Precomputation (kept here)
+// =============================================================
 void Algorithm::precomputeDependencyGraph(const std::vector<Package*>& packages,
                                           const std::vector<Dependency*>& dependencies)
 {
@@ -281,16 +148,4 @@ void Algorithm::precomputeDependencyGraph(const std::vector<Package*>& packages,
             m_dependencyGraph[package] = std::move(depVector);
         }
     }
-}
-
-bool Algorithm::canPackageBeAdded(const Bag& bag, const Package& package, int maxCapacity,
-                                  std::unordered_map<const Package*, bool>& cache) {
-    auto it = cache.find(&package);
-    if (it != cache.end()) {
-        return it->second;
-    }
-     const auto& deps = m_dependencyGraph.at(&package);
-    bool result = bag.canAddPackage(package, maxCapacity, deps);
-    cache[&package] = result;
-    return result;
 }

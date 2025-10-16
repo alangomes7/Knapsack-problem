@@ -45,10 +45,7 @@ void KnapsackWindow::initializeUiElements()
     QIntValidator* validator = new QIntValidator(0, 100, this);
     ui->lineEdit_seed->setValidator(validator);
 
-    std::random_device rd;
-    std::mt19937 engine(rd()); 
-    std::uniform_int_distribution<int> distribution(0, 100);
-    ui->lineEdit_seed->setText(QString::number(distribution(engine)));
+    ui->lineEdit_seed->setText(QString::number(15));
 
     ui->plainTextEdit_logs->setReadOnly(true);
     ui->comboBox_algorithm->addItem("Select Algorithm");

@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "algorithm.h"
-#include "localSearch.h"
+#include "SearchEngine.h"
 #include "metaheuristicHelper.h"
 
 // Forward declarations
@@ -148,7 +148,7 @@ private:
     std::vector<double> m_alphaScores;
     std::vector<int>    m_alphaCounts;
     
-    LocalSearch m_localSearch;
+    SearchEngine m_iteratedLocalSearch;
     MetaheuristicHelper m_helper;
 };
 

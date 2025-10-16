@@ -10,9 +10,9 @@
 #include "dependency.h"
 #include "algorithm.h"
 
-VNS::VNS(double maxTime) : m_maxTime(maxTime) {}
+VNS::VNS(double maxTime) : m_maxTime(maxTime), m_searchEngine(0), m_helper() {}
 
-VNS::VNS(double maxTime, unsigned int seed) : m_maxTime(maxTime), m_helper(seed) {}
+VNS::VNS(double maxTime, unsigned int seed) : m_maxTime(maxTime), m_searchEngine(seed), m_helper(seed) {}
 
 Bag* VNS::run(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages,
               Algorithm::LOCAL_SEARCH localSearchMethod,
@@ -33,11 +33,11 @@ Bag* VNS::run(int bagSize, Bag* initialBag, const std::vector<Package*>& allPack
             break;
         }
         
-        Bag* shakenBag = shake(*bestBag, k, allPackages, bagSize * 2, dependencyGraph);
-        m_localSearch.run(*shakenBag, bagSize, allPackages, localSearchMethod, dependencyGraph, 200);
-        m_helper.makeItFeasible(*shakenBag, bagSize, dependencyGraph);
-
-        if (shakenBag->getBenefit() > bestBag->getBenefit()) {
+        Bag* shakenBag = shake(*bestBag, k, allPackages, bagSize, dependencyGraph);
+        m_searchEngine.localSearch(*shakenBag, bagSize, allPackages, localSearchMethod, dependencyGraph, 100);
+        
+        bool improved = shakenBag->getBenefit() > bestBag->getBenefit();
+        if (improved) {
             delete bestBag;
             bestBag = shakenBag;
             k = 1;
@@ -46,7 +46,8 @@ Bag* VNS::run(int bagSize, Bag* initialBag, const std::vector<Package*>& allPack
             k++;
         }
     }
-
+    m_helper.makeItFeasible(*bestBag, bagSize, dependencyGraph);
+    
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     bestBag->setAlgorithmTime(elapsed_seconds.count());
