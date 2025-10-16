@@ -14,7 +14,6 @@
 #include "MetaheuristicHelper.h"
 #include "vnd.h"
 #include "vns.h"
-#include "grasp.h"
 
 Algorithm::Algorithm(double maxTime)
     : m_maxTime(maxTime), m_metaheuristicHelper()
@@ -54,8 +53,8 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,
 
     // === Constructive Phase ===
     resultBag.push_back(strategies.randomBag(bagSize, packages));
-    auto greedyBags = strategies.greedyBag(bagSize, packages);
-    auto randomGreedyBags = strategies.randomGreedy(bagSize, packages);
+    std::vector<Bag*> greedyBags = strategies.greedyBag(bagSize, packages);
+    std::vector<Bag*> randomGreedyBags = strategies.randomGreedy(bagSize, packages);
 
     resultBag.insert(resultBag.end(), greedyBags.begin(), greedyBags.end());
     resultBag.insert(resultBag.end(), randomGreedyBags.begin(), randomGreedyBags.end());
@@ -74,25 +73,23 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,
     if (bestInitialBag) {
         // VND
         VND vnd(m_maxTime, m_generator());
-        std::vector<Algorithm::LOCAL_SEARCH> neighborhoods = {LOCAL_SEARCH::FIRST_IMPROVEMENT, LOCAL_SEARCH::RANDOM_IMPROVEMENT, LOCAL_SEARCH::BEST_IMPROVEMENT};
-        Bag* vndBag = vnd.run(bagSize, bestInitialBag, packages, neighborhoods, m_dependencyGraph);
+        Bag* vndBag = vnd.run(bagSize, bestInitialBag, packages, m_dependencyGraph);
         vndBag->setTimestamp(m_timestamp);
-        resultBag.push_back(vndBag);
+        
 
-        // VNS (3 local search types)
+        // VNS
         VNS vns(m_maxTime, m_generator());
-        Bag* vnsFirstBag = vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::FIRST_IMPROVEMENT, m_dependencyGraph);
-        Bag* vnsBestBag = vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
-        Bag* vnsRandomBag = vns.run(bagSize, bestInitialBag, packages, Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT, m_dependencyGraph);
-        resultBag.push_back(vnsFirstBag);
-        resultBag.push_back(vnsBestBag);
-        resultBag.push_back(vnsRandomBag);
+        Bag* vnsBag = vns.run(bagSize, bestInitialBag, packages, m_dependencyGraph);
+;
 
         // GRASP (combines best previous results)
         // GRASP grasp(m_maxTime, m_generator());
-        // Bag* graspBag = grasp.run(bagSize, {vndBag, vnsBestBag}, packages,
-        //                           Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
+        // Bag* graspBag = grasp.run(bagSize, resultBag, packages, SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1,
+        //                            Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
         // graspBag->setTimestamp(m_timestamp);
+        
+        resultBag.push_back(vndBag);
+        resultBag.push_back(vnsBag);
         // resultBag.push_back(graspBag);
     }
 

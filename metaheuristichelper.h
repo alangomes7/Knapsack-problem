@@ -11,19 +11,28 @@ class Dependency;
 
 /**
  * @brief Utility class offering helper methods for metaheuristics solving
- *        the knapsack problem with dependencies.
+ * the knapsack problem with dependencies.
  *
  * This simplified version includes only:
- *  - smartRemoval()
- *  - temperatureBiasedRemoval()
- *  - probabilisticGreedyRemoval()
+ * - smartRemoval()
+ * - temperatureBiasedRemoval()
+ * - probabilisticGreedyRemoval()
  */
 class MetaheuristicHelper {
 public:
+    enum class FeasibilityStrategy {
+        SMART,
+        TEMPERATURE_BIASED,
+        PROBABILISTIC_GREEDY,
+        RANDOM
+    };
+
     explicit MetaheuristicHelper(unsigned int seed = std::random_device{}());
 
     /**
-     * @brief Makes the bag feasible by removing packages until within capacity.
+     * @brief Makes the bag feasible by testing all removal strategies
+     * (SMART, TEMPERATURE_BIASED, PROBABILISTIC_GREEDY)
+     * and keeping the best feasible result (highest benefit).
      */
     bool makeItFeasible(
         Bag& bag, int maxCapacity,
@@ -42,7 +51,7 @@ public:
 private:
     bool removeOnePackageWithStrategy(
         Bag&, int,
-        const std::unordered_map<const Package*, std::vector<const Dependency*>>&, int strategyIndex);
+        const std::unordered_map<const Package*, std::vector<const Dependency*>>&, FeasibilityStrategy strategy);
 
     // --- Active strategies ---
     bool smartRemoval(Bag&, int,

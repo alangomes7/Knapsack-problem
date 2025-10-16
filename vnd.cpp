@@ -10,61 +10,80 @@
 #include "algorithm.h"
 
 VND::VND(double maxTime)
-    : m_maxTime(maxTime), m_searchEngine(0), m_helper() {}
+    : m_maxTime(maxTime), m_searchEngine(0), m_metaheuristicHelper() {}
 
 VND::VND(double maxTime, unsigned int seed)
-    : m_maxTime(maxTime), m_searchEngine(seed), m_helper(seed) {}
+    : m_maxTime(maxTime), m_searchEngine(seed), m_metaheuristicHelper(seed) {}
 
-Bag* VND::run(int bagSize, Bag* initialBag, const std::vector<Package*>& allPackages,
-              const std::vector<Algorithm::LOCAL_SEARCH>& neighborhoods,
+Bag* VND::run(int bagSize, const Bag* initialBag,
+              const std::vector<Package*>& allPackages,
               const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
 {
-    auto bestBag = new Bag(*initialBag);
-    bestBag->setBagAlgorithm(Algorithm::ALGORITHM_TYPE::VND);
-
-    if (neighborhoods.empty()) {
-        m_helper.makeItFeasible(*bestBag, bagSize, dependencyGraph);
-        return bestBag;
+    if (!initialBag) {
+        return new Bag(Algorithm::ALGORITHM_TYPE::NONE, "0");
     }
 
+    // Neighborhood structures
+    std::vector<SearchEngine::MovementType> movements = {
+        SearchEngine::MovementType::ADD,
+        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1,
+        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_2,
+        SearchEngine::MovementType::SWAP_REMOVE_2_ADD_1,
+        SearchEngine::MovementType::EJECTION_CHAIN
+    };
+
+    Algorithm::LOCAL_SEARCH searchMethod = Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT;
+
     int k = 0;
-    const int k_max = static_cast<int>(neighborhoods.size());
+    const int k_max = static_cast<int>(movements.size());
+    
+    // Work on a local copy of the initial bag
+    std::unique_ptr<Bag> bestBag = std::make_unique<Bag>(*initialBag);
     bestBag->setMetaheuristicParameters("k_max=" + std::to_string(k_max));
 
-    auto start_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> max_duration_seconds(m_maxTime);
+    auto start_time = std::chrono::steady_clock::now();
+    auto deadline = start_time + std::chrono::duration<double>(m_maxTime);
 
     // === Variable Neighborhood Descent Loop ===
     while (k < k_max) {
-        if (std::chrono::high_resolution_clock::now() - start_time > max_duration_seconds)
+        if (std::chrono::steady_clock::now() > deadline){
             break;
+        }
 
-        auto currentSearch = neighborhoods[k];
+        // Create a local copy for current neighborhood search
+        std::unique_ptr<Bag> currentBagSearch = std::make_unique<Bag>(*bestBag);
 
-        // Clone current best and apply local search
-        Bag* newBag = new Bag(*bestBag);
-        m_searchEngine.localSearch(*newBag, bagSize, allPackages,
-                                          currentSearch, dependencyGraph, 150);
-        newBag->setLocalSearch(currentSearch);
+        // Perform local search for this neighborhood
+        m_searchEngine.localSearch(
+            *currentBagSearch,
+            bagSize,
+            allPackages,
+            movements[k],
+            searchMethod,
+            dependencyGraph,
+            200,
+            2000,
+            deadline
+        );
 
-        bool improved = newBag->getBenefit() > bestBag->getBenefit();
-        // If improvement, restart from first neighborhood
+        m_metaheuristicHelper.makeItFeasible(*currentBagSearch, bagSize, dependencyGraph);
+
+        bool improved = currentBagSearch->getBenefit() > bestBag->getBenefit();
+
         if (improved) {
-            delete bestBag;
-            bestBag = newBag;
-            k = 0; // restart exploration
+            bestBag = std::move(currentBagSearch);
+            k = 0; // Restart from first neighborhood
         } else {
-            delete newBag;
-            ++k; // move to next neighborhood
+            ++k;
         }
     }
 
-    // === Repair final solution ===
-    m_helper.makeItFeasible(*bestBag, bagSize, dependencyGraph);
-
-    auto end_time = std::chrono::high_resolution_clock::now();
+    auto end_time = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
-    bestBag->setAlgorithmTime(elapsed_seconds.count());
 
-    return bestBag;
+    bestBag->setAlgorithmTime(elapsed_seconds.count());
+    bestBag->setBagAlgorithm(Algorithm::ALGORITHM_TYPE::VND);
+    bestBag->setLocalSearch(Algorithm::LOCAL_SEARCH::NONE);
+
+    return new Bag(*bestBag);
 }

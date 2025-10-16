@@ -4,99 +4,81 @@
 
 #include <string>
 #include <algorithm>
+#include <numeric>
+
+// =====================================================================================
+// Constructors and Standard Methods
+// =====================================================================================
 
 Bag::Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp)
-    : m_bagAlgorithm(bagAlgorithm),
-      m_timeStamp(timestamp),
-      m_size(0),
-      m_benefit(0), // Init cached benefit
-      m_algorithmTimeSeconds(0.0),
-      m_localSearch(Algorithm::LOCAL_SEARCH::NONE) {
-}
+    : m_bagAlgorithm(bagAlgorithm), m_timeStamp(timestamp), m_size(0), m_benefit(0),
+      m_algorithmTimeSeconds(0.0), m_localSearch(Algorithm::LOCAL_SEARCH::NONE) {}
 
 Bag::Bag(const std::vector<Package*>& packages,
          const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
-    : m_bagAlgorithm(Algorithm::ALGORITHM_TYPE::NONE),
-      m_size(0),
-      m_benefit(0),
-      m_algorithmTimeSeconds(0.0),
-      m_localSearch(Algorithm::LOCAL_SEARCH::NONE) {
-
-    // Iterate through the list of packages to add
+    : m_bagAlgorithm(Algorithm::ALGORITHM_TYPE::NONE), m_size(0), m_benefit(0),
+      m_algorithmTimeSeconds(0.0), m_localSearch(Algorithm::LOCAL_SEARCH::NONE) {
     for (const Package* pkg : packages) {
         if (pkg) {
-            // Find the package's dependencies in the precomputed graph (fast lookup)
             auto it = dependencyGraph.find(pkg);
-
-            // Ensure the package exists in the graph to prevent errors
             if (it != dependencyGraph.end()) {
-                // Correctly call the fast addPackage method with the cached dependency vector.
-                // `it->second` is the std::vector<const Dependency*>&
                 addPackage(*pkg, it->second);
             }
         }
     }
 }
+// =====================================================================================
+// Getters
+// =====================================================================================
 
-const std::unordered_set<const Package*>& Bag::getPackages() const {
-    return m_baggedPackages;
-}
-
-const std::unordered_set<const Dependency*>& Bag::getDependencies() const {
-    return m_baggedDependencies;
-}
-
-int Bag::getSize() const {
-    return m_size;
-}
-
-int Bag::getBenefit() const {
-    // OPTIMIZATION: Return the cached value in O(1) time.
-    return m_benefit;
-}
-
+const std::unordered_set<const Package*>& Bag::getPackages() const { return m_baggedPackages; }
+const std::unordered_set<const Dependency*>& Bag::getDependencies() const { return m_baggedDependencies; }
+const std::unordered_map<const Dependency *, int> &Bag::getDependencyRefCount() const{ return m_dependencyRefCount; }
+int Bag::getSize() const { return m_size; }
+int Bag::getBenefit() const { return m_benefit; }
+/**
+ * @brief Gets the algorithm type used to create the bag.
+ * @return The algorithm type.
+ */
 Algorithm::ALGORITHM_TYPE Bag::getBagAlgorithm() const {
     return m_bagAlgorithm;
 }
 
+/**
+ * @brief Gets the local search method applied to the bag.
+ * @return The local search type.
+ */
 Algorithm::LOCAL_SEARCH Bag::getBagLocalSearch() const {
     return m_localSearch;
 }
 
+/**
+ * @brief Gets the execution time of the algorithm.
+ * @return The execution time in seconds.
+ */
 double Bag::getAlgorithmTime() const {
     return m_algorithmTimeSeconds;
 }
 
+/**
+ * @brief Gets the timestamp for when the bag was created.
+ * @return The timestamp string.
+ */
 std::string Bag::getTimestamp() const {
     return m_timeStamp;
 }
 
-const std::string &Bag::getMetaheuristicParameters() const
-{
+/**
+ * @brief Gets the string of parameters used by a metaheuristic algorithm.
+ * @return The metaheuristic parameters.
+ */
+const std::string& Bag::getMetaheuristicParameters() const {
     return m_metaheuristicParams;
 }
 
-void Bag::setTimestamp(const std::string &timestamp)
-{
-    m_timeStamp = timestamp;
-}
-
-void Bag::setAlgorithmTime(double seconds) {
-    m_algorithmTimeSeconds = seconds;
-}
-
-void Bag::setLocalSearch(Algorithm::LOCAL_SEARCH localSearch) {
-    m_localSearch = localSearch;
-}
-
-void Bag::setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm) {
-    m_bagAlgorithm = bagAlgorithm;
-}
-
-void Bag::setMetaheuristicParameters(const std::string &params)
-{
-    m_metaheuristicParams = params;
-}
+// =====================================================================================
+// Setters
+// =====================================================================================
 
 bool Bag::addPackage(const Package& package, const std::vector<const Dependency*>& dependencies) {
     // Attempt to insert the package. If it's already there, `second` will be false.
@@ -149,7 +131,6 @@ void Bag::removePackage(const Package& package, const std::vector<const Dependen
         }
     }
 }
-
 bool Bag::canAddPackage(const Package& package, int maxCapacity, const std::vector<const Dependency*>& dependencies) const {
     int potentialSizeIncrease = 0;
     for (const Dependency* dependency : dependencies) {
@@ -192,15 +173,178 @@ bool Bag::canSwap(const Package& packageIn, const Package& packageOut, int bagSi
     return (m_size + sizeChange) <= bagSize;
 }
 
-bool Bag::canSwapReadOnly(const Package& packageIn, const Package& packageOut, int bagSize) const noexcept
-{
-    // Compute the net weight if we remove one package and add another.
-    const int newWeight = m_size - packageIn.getDependenciesSize() + packageOut.getDependenciesSize();
-
-    // Feasible only if it stays within bag capacity.
-    return newWeight <= bagSize && newWeight >= 0;
+void Bag::setTimestamp(const std::string& timestamp) {
+    m_timeStamp = timestamp;
 }
 
+/**
+ * @brief Sets the algorithm execution time.
+ * @param seconds The execution time in seconds.
+ */
+void Bag::setAlgorithmTime(double seconds) {
+    m_algorithmTimeSeconds = seconds;
+}
+
+/**
+ * @brief Sets the local search method used.
+ * @param localSearch The local search type.
+ */
+void Bag::setLocalSearch(Algorithm::LOCAL_SEARCH localSearch) {
+    m_localSearch = localSearch;
+}
+
+/**
+ * @brief Sets the main algorithm type used.
+ * @param bagAlgorithm The algorithm type.
+ */
+void Bag::setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm) {
+    m_bagAlgorithm = bagAlgorithm;
+}
+
+/**
+ * @brief Sets the metaheuristic parameter string.
+ * @param params The parameter string.
+ */
+void Bag::setMetaheuristicParameters(const std::string& params) {
+    m_metaheuristicParams = params;
+}
+
+// =====================================================================================
+// New & Corrected Read-Only Feasibility Checks
+// =====================================================================================
+
+/**
+ * @brief [BUG FIX] The original implementation was incorrect for shared dependencies.
+ * This corrected version accurately calculates the size change by checking dependency reference counts.
+ */
+bool Bag::canSwapReadOnly(const Package& packageIn, const Package& packageOut, int bagSize) const noexcept
+{
+    int sizeChange = 0;
+
+    // Calculate size reduction from removing packageIn
+    for (const auto& dep : packageIn.getDependencies()) {
+        // If this dependency is only used by packageIn, its size will be removed.
+        if (m_dependencyRefCount.count(dep.second) && m_dependencyRefCount.at(dep.second) == 1) {
+            sizeChange -= dep.second->getSize();
+        }
+    }
+
+    // Calculate size increase from adding packageOut
+    for (const auto& dep : packageOut.getDependencies()) {
+        // If this dependency is not already in the bag, its size will be added.
+        // This correctly handles the case where packageIn's removal doesn't remove a shared dependency.
+        if (m_dependencyRefCount.count(dep.second) == 0) {
+            sizeChange += dep.second->getSize();
+        }
+    }
+
+    return (m_size + sizeChange) <= bagSize;
+}
+
+/**
+ * @brief Logic for checking a 1-to-N swap.
+ */
+bool Bag::canSwapReadOnly(const Package& packageIn, const std::vector<Package*>& packagesOut, int bagSize,
+                         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph) const noexcept
+{
+    int sizeChange = 0;
+    const auto& depsIn = dependencyGraph.at(&packageIn);
+
+    // Calculate size reduction from removing packageIn
+    for (const auto* dep : depsIn) {
+        if (m_dependencyRefCount.count(dep) && m_dependencyRefCount.at(dep) == 1) {
+            sizeChange -= dep->getSize();
+        }
+    }
+
+    // Create a temporary set of all unique dependencies that will be added
+    std::unordered_set<const Dependency*> depsOutUnique;
+    for (const auto* p_out : packagesOut) {
+        const auto& deps = dependencyGraph.at(p_out);
+        depsOutUnique.insert(deps.begin(), deps.end());
+    }
+
+    // Calculate size increase from adding all new unique dependencies
+    for (const auto* dep : depsOutUnique) {
+        // If the dependency is not already present in the bag, its size contributes to the increase.
+        if (m_dependencyRefCount.count(dep) == 0) {
+            sizeChange += dep->getSize();
+        }
+    }
+    
+    return (m_size + sizeChange) <= bagSize;
+}
+
+/**
+ * @brief Logic for checking an N-to-1 swap.
+ */
+bool Bag::canSwapReadOnly(const std::vector<const Package*>& packagesIn, const Package& packageOut, int bagSize,
+                         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph) const noexcept
+{
+    int sizeChange = 0;
+    
+    // Create a temporary reference count map to simulate removal
+    std::unordered_map<const Dependency*, int> tempRefCount = m_dependencyRefCount;
+    for (const auto* p_in : packagesIn) {
+        for (const auto* dep : dependencyGraph.at(p_in)) {
+            if (tempRefCount.count(dep)) {
+                tempRefCount[dep]--;
+            }
+        }
+    }
+
+    // Calculate the size reduction based on dependencies whose counts dropped to 0
+    for(const auto& pair : tempRefCount) {
+        const Dependency* dep = pair.first;
+        int newCount = pair.second;
+        int originalCount = m_dependencyRefCount.at(dep);
+
+        if (newCount == 0 && originalCount > 0) {
+            sizeChange -= dep->getSize();
+        }
+    }
+    
+    // Calculate size increase from adding packageOut, using the simulated reference counts
+    for (const auto* dep : dependencyGraph.at(&packageOut)) {
+        if (tempRefCount.count(dep) == 0 || tempRefCount.at(dep) == 0) {
+            sizeChange += dep->getSize();
+        }
+    }
+
+    return (m_size + sizeChange) <= bagSize;
+}
+
+/**
+ * @brief Implementation of the new getInvalidPackages method.
+ */
+std::vector<const Package*> Bag::getInvalidPackages(
+    const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph) const
+{
+    std::vector<const Package*> invalidPackages;
+    // Check every package currently in the bag
+    for (const Package* pkg : m_baggedPackages) {
+        bool is_valid = true;
+        // Look up its required dependencies in the provided graph
+        const auto& required_deps = dependencyGraph.at(pkg);
+        
+        // Check if each required dependency is present in the bag's dependency set
+        for (const Dependency* req_dep : required_deps) {
+            if (m_baggedDependencies.count(req_dep) == 0) {
+                is_valid = false;
+                break;
+            }
+        }
+        
+        if (!is_valid) {
+            invalidPackages.push_back(pkg);
+        }
+    }
+    return invalidPackages;
+}
+
+// =====================================================================================
+// Utility Methods
+// =====================================================================================
 std::string Bag::toString() const {
     Algorithm algoHelper(0);
     std::string bagString;

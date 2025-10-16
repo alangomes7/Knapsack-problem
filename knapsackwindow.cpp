@@ -50,10 +50,12 @@ void KnapsackWindow::initializeUiElements()
     ui->plainTextEdit_logs->setReadOnly(true);
     ui->comboBox_algorithm->addItem("Select Algorithm");
     ui->label_bagCapacityNumber->setText(QString::number(m_bagSize) + " MB");
-    int executionTime = 5;
-    for(int i = 1; i <= 3; i++) {
-        ui->comboBox_executionTime->addItem(QString::number(executionTime * i) + " s");
+    int executionTime = 20;
+    for(int i = 2; i <= 4; i++){
+        ui->comboBox_executionTime->addItem(QString::number(executionTime) + " s");
+        executionTime = executionTime * i;
     }
+    
 }
 
 void KnapsackWindow::setupConnections() {
@@ -115,11 +117,9 @@ void KnapsackWindow::onRunButtonClicked() {
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit)));
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Benefit_Ratio)));
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_Package_Size)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VND, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::FIRST_IMPROVEMENT)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT)));
-    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::GRASP, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VND, Algorithm::LOCAL_SEARCH::NONE)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::NONE)));
+    ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::GRASP, Algorithm::LOCAL_SEARCH::NONE)));
 
     saveData();
     //saveReport(m_bags, m_availablePackages, m_availableDependencies, ui->lineEdit_seed->text().toInt(), m_filePath.toStdString(), timestamp);

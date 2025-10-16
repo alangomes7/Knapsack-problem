@@ -13,172 +13,69 @@ class Algorithm;
 
 class Bag {
 public:
-    /**
-     * @brief Constructs an empty Bag.
-     * @param bagAlgorithm The algorithm type used to populate the bag.
-     * @param timestamp The creation timestamp for the bag.
-     */
+    // --- Constructors ---
     explicit Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp);
-
-    /**
-     * @brief Constructs a Bag from a vector of packages using a precomputed dependency graph.
-     *
-     * This constructor is highly efficient because it leverages a pre-built map of
-     * dependencies. Instead of querying each package for its dependencies individually
-     * (which is slower), it performs a fast lookup in the provided graph and calls
-     * the optimized `addPackage` method.
-     *
-     * @param packages The vector of Package pointers to add to the bag.
-     * @param dependencyGraph A constant reference to the precomputed dependency graph.
-     */
     explicit Bag(const std::vector<Package*>& packages,
                  const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph);
 
-    /**
-     * @brief Gets the set of packages currently in the bag.
-     * @return A constant reference to the unordered_set of Package pointers.
-     */
+    // --- Getters ---
     const std::unordered_set<const Package*>& getPackages() const;
-
-    /**
-     * @brief Gets the set of unique dependencies for all packages in the bag.
-     * @return A constant reference to the unordered_set of Dependency pointers.
-     */
     const std::unordered_set<const Dependency*>& getDependencies() const;
+    const std::unordered_map<const Dependency*, int>& getDependencyRefCount() const;
 
-    /**
-     * @brief Gets the total size of the bag.
-     * The size is the sum of the sizes of all unique dependencies.
-     * @return The total size of the bag as an integer.
-     */
     int getSize() const;
-
-    /**
-     * @brief Gets the total benefit of the bag.
-     * The benefit is the sum of the benefits of all packages in the bag.
-     * @note This is an O(1) operation as the benefit is cached.
-     * @return The total benefit of the bag as an integer.
-     */
     int getBenefit() const;
-
-    /**
-     * @brief Gets the primary algorithm used to create the bag's contents.
-     * @return The Algorithm::ALGORITHM_TYPE enum value.
-     */
     Algorithm::ALGORITHM_TYPE getBagAlgorithm() const;
-
-    /**
-     * @brief Gets the local search algorithm applied to the bag.
-     * @return The Algorithm::LOCAL_SEARCH enum value.
-     */
     Algorithm::LOCAL_SEARCH getBagLocalSearch() const;
-
-    /**
-     * @brief Gets the execution time of the algorithm used to fill the bag.
-     * @return The algorithm's execution time in seconds.
-     */
     double getAlgorithmTime() const;
-
-    /**
-     * @brief Gets the timestamp of when the bag was created.
-     * @return A string representing the creation timestamp.
-     */
     std::string getTimestamp() const;
-
-    /**
-     * @brief Gets the parameters used for the metaheuristic algorithm.
-     * @return A constant reference to a string containing the parameters.
-     */
     const std::string& getMetaheuristicParameters() const;
 
-    /**
-     * @brief Sets the bag's timestamp.
-     * @param timestamp The creation timestamp for the bag.
-     */
+    // --- Setters ---
     void setTimestamp(const std::string& timestamp);
-
-    /**
-     * @brief Sets the execution time of the algorithm.
-     * @param seconds The execution time in seconds.
-     */
     void setAlgorithmTime(double seconds);
-
-    /**
-     * @brief Sets the local search strategy used.
-     * @param localSearch The local search algorithm to set.
-     */
     void setLocalSearch(Algorithm::LOCAL_SEARCH localSearch);
-
-    /**
-     * @brief Sets the primary algorithm used.
-     * @param bagAlgorithm The main algorithm to set.
-     */
     void setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm);
-
-    /**
-     * @brief Sets the metaheuristic parameters string.
-     * @param params A string detailing the parameters used.
-     */
     void setMetaheuristicParameters(const std::string& params);
 
-    /**
-     * @brief Adds a package to the bag using a pre-fetched list of its dependencies.
-     * This is an optimized method that avoids redundant dependency lookups.
-     * @param package The package to add.
-     * @param dependencies A vector of the package's dependencies.
-     * @return True if the package was successfully added, false if it was already in the bag.
-     */
+    // --- Core Bag Operations ---
     bool addPackage(const Package& package, const std::vector<const Dependency*>& dependencies);
-
-    /**
-     * @brief Removes a package from the bag using a pre-fetched list of its dependencies.
-     *
-     * This version is more efficient as it iterates over a vector of dependencies,
-     * which benefits from better memory locality compared to the unordered_map in the Package class.
-     *
-     * @param package The package to remove.
-     * @param dependencies A vector containing pointers to the dependencies of the package.
-     */
     void removePackage(const Package& package, const std::vector<const Dependency*>& dependencies);
 
-    /**
-     * @brief Checks if a package can be added to the bag without exceeding a maximum capacity.
-     * @param package The package to check.
-     * @param maxCapacity The maximum capacity constraint of the bag.
-     * @param dependencies A pre-fetched vector of the package's dependencies.
-     * @return True if the package can be added, false otherwise.
-     */
+    // --- Feasibility Checks ---
     bool canAddPackage(const Package& package, int maxCapacity, const std::vector<const Dependency*>& dependencies) const;
-
-    /**
-     * @brief Determines if swapping two packages is feasible without exceeding the bag's size limit.
-     * This method calculates the net change in size from removing one package and adding another.
-     * @param packageIn The package to be removed from the bag.
-     * @param packageOut The package to be added to the bag.
-     * @param bagSize The maximum capacity of the bag.
-     * @return True if the swap is valid within the size constraints, false otherwise.
-     */
+    
+    // --- (DEPRECATED) Old canSwap method, kept for compatibility if needed ---
     bool canSwap(const Package& packageIn, const Package& packageOut, int bagSize) const;
 
     /**
-     * @brief Checks if swapping two packages would be feasible without modifying the bag's internal state.
-     *
-     * This method performs a pure, read-only feasibility check to determine whether removing one package
-     * and adding another would keep the total weight within the bag's size limit. Unlike `canSwap()`,
-     * this function guarantees thread safety by avoiding any internal mutations or dependency updates,
-     * making it suitable for use in parallel evaluations.
-     *
-     * @param packageIn The package that would be removed from the bag.
-     * @param packageOut The package that would be added to the bag.
-     * @param bagSize The maximum capacity of the bag.
-     * @return True if the swap is feasible under the bag's size constraint, false otherwise.
+     * @brief Checks if a 1-for-1 swap is feasible without modifying the bag.
+     * This version correctly handles shared dependencies.
      */
     bool canSwapReadOnly(const Package& packageIn, const Package& packageOut, int bagSize) const noexcept;
 
     /**
-     * @brief Generates a formatted string summarizing the bag's contents and statistics.
-     * @return A string containing details like algorithm, size, benefit, time, and package list.
+     * @brief Checks if swapping one package in the bag for multiple packages outside is feasible.
      */
+    bool canSwapReadOnly(const Package& packageIn, const std::vector<Package*>& packagesOut, int bagSize,
+                         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph) const noexcept;
+
+    /**
+     * @brief Checks if swapping multiple packages in the bag for one package outside is feasible.
+     */
+    bool canSwapReadOnly(const std::vector<const Package*>& packagesIn, const Package& packageOut, int bagSize,
+                         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph) const noexcept;
+    
+    /**
+     * @brief Identifies packages in the bag whose dependencies are no longer met.
+     * This is essential for validating the bag's state after removals, especially for the Ejection Chain move.
+     * @param dependencyGraph The global dependency graph for lookups.
+     * @return A vector of const Package pointers that are now invalid.
+     */
+    std::vector<const Package*> getInvalidPackages(
+        const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph) const;
+
+    // --- Utility ---
     std::string toString() const;
 
 private:

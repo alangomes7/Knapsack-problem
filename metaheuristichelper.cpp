@@ -7,6 +7,7 @@
 #include <limits>
 #include <cmath>
 #include <unordered_set>
+#include <memory>
 
 MetaheuristicHelper::MetaheuristicHelper(unsigned int seed)
     : m_generator(seed), m_seed(seed) {}
@@ -21,7 +22,6 @@ double MetaheuristicHelper::computeEfficiency(const Package* pkg) const noexcept
 }
 
 double MetaheuristicHelper::computeRemovalScore(const Package* pkg, int dependents, double eff) const noexcept {
-    // low efficiency + high dependents + low benefit = good removal target
     double dependentsPenalty = dependents;
     return eff + dependentsPenalty + (1.0 / (pkg->getBenefit() + 1.0));
 }
@@ -33,33 +33,51 @@ bool MetaheuristicHelper::makeItFeasible(
     if (bag.getSize() <= maxCapacity)
         return true;
 
-    int strategyIndex = 0;
-    while (bag.getSize() > maxCapacity) {
-        bool removed = removeOnePackageWithStrategy(bag, maxCapacity, dependencyGraph, strategyIndex);
-        if (!removed)
-            continue;
+    // Test all three strategies and choose the best feasible result
+    std::vector<std::pair<FeasibilityStrategy, Bag>> results;
+    results.reserve(3);
 
-        // pick random next strategy
-        strategyIndex = randomNumberInt(0, getStrategyCount() - 1);
-        if (bag.getSize() <= maxCapacity)
-            return true;
+    for (FeasibilityStrategy strat : {
+             FeasibilityStrategy::SMART,
+             FeasibilityStrategy::TEMPERATURE_BIASED,
+             FeasibilityStrategy::PROBABILISTIC_GREEDY})
+    {
+        Bag testBag = bag; // copy original
+        while (testBag.getSize() > maxCapacity) {
+            if (!removeOnePackageWithStrategy(testBag, maxCapacity, dependencyGraph, strat))
+                break;
+        }
+        results.emplace_back(strat, std::move(testBag));
+            
     }
 
-    return bag.getSize() <= maxCapacity;
+    // Choose the feasible bag with the best total benefit
+    auto bestIt = std::max_element(results.begin(), results.end(),
+        [](const auto& a, const auto& b) {
+            return a.second.getBenefit() < b.second.getBenefit();
+        });
+
+    // Replace the input bag with the best feasible result
+    bag = bestIt->second;
+    return true;
 }
 
 bool MetaheuristicHelper::removeOnePackageWithStrategy(
     Bag& bag, int maxCapacity,
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
-    int strategyIndex)
+    FeasibilityStrategy strategy)
 {
     if (bag.getPackages().empty()) return false;
 
-    switch (strategyIndex % getStrategyCount()) {
-        case 0: return smartRemoval(bag, maxCapacity, dependencyGraph);
-        case 1: return temperatureBiasedRemoval(bag, maxCapacity, dependencyGraph);
-        case 2: return probabilisticGreedyRemoval(bag, maxCapacity, dependencyGraph);
-        default: return smartRemoval(bag, maxCapacity, dependencyGraph);
+    switch (strategy) {
+        case FeasibilityStrategy::SMART:
+            return smartRemoval(bag, maxCapacity, dependencyGraph);
+        case FeasibilityStrategy::TEMPERATURE_BIASED:
+            return temperatureBiasedRemoval(bag, maxCapacity, dependencyGraph);
+        case FeasibilityStrategy::PROBABILISTIC_GREEDY:
+            return probabilisticGreedyRemoval(bag, maxCapacity, dependencyGraph);
+        default:
+            return smartRemoval(bag, maxCapacity, dependencyGraph);
     }
 }
 
