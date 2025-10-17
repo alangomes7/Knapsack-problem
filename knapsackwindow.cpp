@@ -26,7 +26,6 @@ KnapsackWindow::KnapsackWindow(QWidget *parent)
 }
 
 KnapsackWindow::~KnapsackWindow() {
-    // Clean up all dynamically allocated objects to prevent memory leaks.
     for (Bag* bag : m_bags) {
         delete bag;
     }
@@ -121,8 +120,8 @@ void KnapsackWindow::onRunButtonClicked() {
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::NONE)));
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::GRASP, Algorithm::LOCAL_SEARCH::NONE)));
 
-    saveData();
-    //saveReport(m_bags, m_availablePackages, m_availableDependencies, ui->lineEdit_seed->text().toInt(), m_filePath.toStdString(), timestamp);
+    FileProcessor fileProcessor(m_filePath.toStdString());
+    fileProcessor.saveData(m_bags);
 }
 
 void KnapsackWindow::onAlgorithmChanged() {
@@ -137,64 +136,8 @@ std::string KnapsackWindow::getAlgorithmLabel(Algorithm::ALGORITHM_TYPE algo, Al
     return label;
 }
 
-void KnapsackWindow::saveData()
-{
-    if (m_bags.empty()) return;
-
-    QFile inputFile(m_filePath);
-    QFileInfo inputInfo(inputFile);
-
-    const QString csvFile = inputInfo.absolutePath() + "/results_" + "knapsackResults.csv";
-
-    QFile file(csvFile);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
-        qWarning() << "Error: Could not create or open" << csvFile;
-        return;
-    }
-
-    QTextStream out(&file);
-    if (file.size() == 0) {
-        out << "Algoritmo, Movement,File name,Timestamp,Tempo de Processamento (s),Pacotes,Depenências,Peso da mochila,Benefício mochila\n";
-    }
-    int bagNumber = static_cast<int>(m_bags.size());
-    int i = 0;
-    for (const Bag *bagData : m_bags) {
-        if (!bagData) continue;
-
-        Algorithm algorithmHelper(0);
-        QString algoritmo = QString::fromStdString(
-            getAlgorithmLabel(bagData->getBagAlgorithm(), bagData->getBagLocalSearch())
-        );
-        QString movement      = QString::fromStdString(bagData->toString(bagData->getMovementType()));
-        QString fileName      = QFileInfo(m_filePath).fileName();
-        QString timestamp     = QString::fromStdString(bagData->getTimestamp());
-        double processingTime = bagData->getAlgorithmTime();
-        int packages          = bagData->getPackages().size();
-        int dependencies      = bagData->getDependencies().size();
-        int bagWeight         = bagData->getSize();
-        int bagBenefit        = bagData->getBenefit();
-
-        out << algoritmo << ","
-            << movement << ","
-            << fileName << ","
-            << timestamp << ","
-            << QString::number(processingTime, 'f', 5) << ","
-            << packages << ","
-            << dependencies << ","
-            << bagWeight << ","
-            << bagBenefit;
-        if (i < bagNumber){
-            out << "\n";
-        }
-        i++;
-    }
-
-    file.close();
-    qDebug() << "CSV written to" << csvFile;
-}
-
 void KnapsackWindow::loadFile() {
-    FileProcessor fileProcessor(m_filePath, this);
+    FileProcessor fileProcessor(m_filePath.toStdString());
     const auto& processedData = fileProcessor.getProcessedData();
 
     if (processedData.size() < 3) {
@@ -204,24 +147,24 @@ void KnapsackWindow::loadFile() {
 
     for (auto const& [key, val] : m_availablePackages) { delete val; }
     m_availablePackages.clear();
-    m_availablePackages.reserve(processedData.at(0).at(0).toInt());
+    m_availablePackages.reserve(std::stoi(processedData.at(0).at(0)));
     for (auto const& [key, val] : m_availableDependencies) { delete val; }
     m_availableDependencies.clear();
-    m_availableDependencies.reserve(processedData.at(0).at(1).toInt());
+    m_availableDependencies.reserve(std::stoi(processedData.at(0).at(1)));
 
-    m_bagSize = processedData.at(0).at(3).toInt();
+    m_bagSize = std::stoi(processedData.at(0).at(3));
     const auto& packagesData = processedData.at(1);
     const auto& dependenciesData = processedData.at(2);
 
     for (int i = 0; i < dependenciesData.size(); ++i) {
         std::string depName = std::to_string(i);
-        int size = dependenciesData.at(i).toInt();
+        int size = std::stoi(dependenciesData.at(i));
         m_availableDependencies[depName] = new Dependency(depName, size);
     }
 
     for (int i = 0; i < packagesData.size(); ++i) {
         std::string pkgName = std::to_string(i);
-        int benefit = packagesData.at(i).toInt();
+        int benefit = std::stoi(packagesData.at(i));
         m_availablePackages[pkgName] = new Package(pkgName, benefit);
     }
 
@@ -229,8 +172,8 @@ void KnapsackWindow::loadFile() {
         const auto& line = processedData.at(i);
         if (line.size() != 2) continue;
 
-        std::string pkgName = line.at(0).toStdString();
-        std::string depName = line.at(1).toStdString();
+        std::string pkgName = line.at(0);
+        std::string depName = line.at(1);
 
         auto pkgIt = m_availablePackages.find(pkgName);
         auto depIt = m_availableDependencies.find(depName);
@@ -309,113 +252,4 @@ void KnapsackWindow::printBag(const std::string& algorithmName) {
     ui->label_bagCapacityNumber->setText(QString::number(bagToPrint->getSize()) + " MB");
     ui->label_bagBenefitNumber->setText(QString::number(bagToPrint->getBenefit()) + " MB");
     ui->label_processingTimeNumber->setText(QString::number(bagToPrint->getAlgorithmTime()) + " s");
-}
-
-void KnapsackWindow::saveReport(const std::vector<Bag*>& bags,
-                                const std::unordered_map<std::string, Package*>& allPackages,
-                                const std::unordered_map<std::string, Dependency*>& allDependencies,
-                                unsigned int seed, const std::string& filePath,
-                                const std::string& timestamp) {
-
-    // 1. Find the best bag to generate the report.
-    if (bags.empty()) {
-        std::cerr << "Error: Cannot generate report from an empty set of solutions." << std::endl;
-        return;
-    }
-
-    auto bestBagIt = std::max_element(bags.begin(), bags.end(), [](const Bag* a, const Bag* b) {
-        return a->getBenefit() < b->getBenefit();
-    });
-    const Bag* bestBag = *bestBagIt;
-
-    // 2. Create a unique and robust report filename.
-    std::filesystem::path inputPath(filePath);
-    std::string directory = inputPath.parent_path().string();
-    std::string stem = inputPath.stem().string();
-    std::string reportFileName = directory + "/report_" + stem + "_" + formatTimestampForFilename(timestamp) + ".txt";
-
-    // 3. Write the report file.
-    std::ofstream outFile(reportFileName);
-    if (!outFile.is_open()) {
-        std::cerr << "Error: Could not open " << reportFileName << " for writing." << std::endl;
-        return;
-    }
-
-    outFile << "--- Experiment Reproduction Report for " << inputPath.filename().string() << " ---" << std::endl;
-
-    // Methaeuristic used
-    Algorithm algorithmAux(0);
-    outFile << "Methaeuristic: " << algorithmAux.toString(bestBag->getBagAlgorithm()) + " | " + algorithmAux.toString(bestBag->getBagLocalSearch()) << std::endl;
-
-    // (a) Benefit value
-    outFile << "Benefit Value: " << bestBag->getBenefit() << std::endl;
-
-    // (b) Total disk space
-    outFile << "Total Disk Space (Dependencies): " << bestBag->getSize() << " MB" << std::endl;
-
-    // (c) Solution as binary vectors (Corrected and efficient logic)
-    outFile << "Solution (Binary Vectors):" << std::endl;
-
-    // --- Packages Vector ---
-    // Create a set of package names in the best solution for fast O(1) lookups.
-    std::unordered_set<std::string> solutionPackages;
-    for (const auto& pkg : bestBag->getPackages()) {
-        solutionPackages.insert(pkg->getName());
-    }
-
-    // To ensure a consistent order, get all package names, sort them, then build the vector.
-    std::vector<std::string> allPackageNames;
-    allPackageNames.reserve(allPackages.size());
-    for (const auto& pair : allPackages) {
-        allPackageNames.push_back(pair.first);
-    }
-    std::sort(allPackageNames.begin(), allPackageNames.end());
-
-    outFile << "[";
-    for (size_t i = 0; i < allPackageNames.size(); ++i) {
-        // Check if the canonically ordered package name exists in the solution set.
-        bool found = solutionPackages.count(allPackageNames[i]);
-        outFile << (found ? "1" : "0") << (i == allPackageNames.size() - 1 ? "" : ", ");
-    }
-    outFile << "]" << std::endl;
-
-    // --- Dependencies Vector (Same logic) ---
-    std::unordered_set<std::string> solutionDependencies;
-    for (const auto& dep : bestBag->getDependencies()) {
-        solutionDependencies.insert(dep->getName());
-    }
-
-    std::vector<std::string> allDependencyNames;
-    allDependencyNames.reserve(allDependencies.size());
-    for (const auto& pair : allDependencies) {
-        allDependencyNames.push_back(pair.first);
-    }
-    std::sort(allDependencyNames.begin(), allDependencyNames.end());
-    
-    outFile << "[";
-    for (size_t i = 0; i < allDependencyNames.size(); ++i) {
-        bool found = solutionDependencies.count(allDependencyNames[i]);
-        outFile << (found ? "1" : "0") << (i == allDependencyNames.size() - 1 ? "" : ", ");
-    }
-    outFile << "]" << std::endl;
-
-    // (d) Metaheuristic parameters
-    outFile << "Metaheuristic Parameters: " << (bestBag->getMetaheuristicParameters().empty() ? "N/A" : bestBag->getMetaheuristicParameters()) << std::endl;
-
-    // (e) Random seed
-    outFile << "Random Seed: " << seed << std::endl;
-
-    // (f) Execution time
-    outFile << "Execution Time: " << std::fixed << std::setprecision(5) << bestBag->getAlgorithmTime() << " seconds" << std::endl;
-
-    // (g) Timestamp
-    outFile << "Timestamp: " << timestamp << std::endl;
-    outFile.close();
-    std::cout << "\nDetailed report saved to " << reportFileName << std::endl;
-}
-
-std::string KnapsackWindow::formatTimestampForFilename(std::string timestamp) {
-    std::replace(timestamp.begin(), timestamp.end(), ' ', '_');
-    std::replace(timestamp.begin(), timestamp.end(), ':', '_');
-    return timestamp;
 }

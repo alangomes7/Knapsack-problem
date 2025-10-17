@@ -15,6 +15,8 @@
 #include "vnd.h"
 #include "vns.h"
 #include "grasp.h"
+#include "fileprocessor.h"
+#include <filesystem>
 
 Algorithm::Algorithm(double maxTime)
     : m_maxTime(maxTime), m_metaheuristicHelper()
@@ -60,6 +62,9 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,
     resultBag.insert(resultBag.end(), greedyBags.begin(), greedyBags.end());
     resultBag.insert(resultBag.end(), randomGreedyBags.begin(), randomGreedyBags.end());
 
+    FileProcessor* fileProcessor = new FileProcessor(std::filesystem::current_path().string());
+    fileProcessor->saveData(resultBag);
+
     // === Select best initial bag ===
     Bag* bestInitialBag = nullptr;
     int bestInitialBenefit = -1;
@@ -76,16 +81,20 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,
         VND vnd(m_maxTime, m_generator());
         Bag* vndBag = vnd.run(bagSize, bestInitialBag, packages, m_dependencyGraph);
         vndBag->setTimestamp(m_timestamp);
+        fileProcessor->saveData({ vndBag });
+
         
         // VNS
         VNS vns(m_maxTime, m_generator());
         Bag* vnsBag = vns.run(bagSize, bestInitialBag, packages, m_dependencyGraph);
+        fileProcessor->saveData({ vnsBag });
 
         // GRASP
         GRASP grasp(m_maxTime, m_generator());
         Bag* graspBag = grasp.run(bagSize, resultBag, packages, SearchEngine::MovementType::EJECTION_CHAIN,
                                     Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
         graspBag->setTimestamp(m_timestamp);
+        fileProcessor->saveData({ graspBag });
         
         resultBag.push_back(vndBag);
         resultBag.push_back(vnsBag);
