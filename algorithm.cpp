@@ -14,6 +14,7 @@
 #include "MetaheuristicHelper.h"
 #include "vnd.h"
 #include "vns.h"
+#include "grasp.h"
 
 Algorithm::Algorithm(double maxTime)
     : m_maxTime(maxTime), m_metaheuristicHelper()
@@ -76,21 +77,19 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,
         Bag* vndBag = vnd.run(bagSize, bestInitialBag, packages, m_dependencyGraph);
         vndBag->setTimestamp(m_timestamp);
         
-
         // VNS
         VNS vns(m_maxTime, m_generator());
         Bag* vnsBag = vns.run(bagSize, bestInitialBag, packages, m_dependencyGraph);
-;
 
-        // GRASP (combines best previous results)
-        // GRASP grasp(m_maxTime, m_generator());
-        // Bag* graspBag = grasp.run(bagSize, resultBag, packages, SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1,
-        //                            Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
-        // graspBag->setTimestamp(m_timestamp);
+        // GRASP
+        GRASP grasp(m_maxTime, m_generator());
+        Bag* graspBag = grasp.run(bagSize, resultBag, packages, SearchEngine::MovementType::EJECTION_CHAIN,
+                                    Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
+        graspBag->setTimestamp(m_timestamp);
         
         resultBag.push_back(vndBag);
         resultBag.push_back(vnsBag);
-        // resultBag.push_back(graspBag);
+        resultBag.push_back(graspBag);
     }
 
     return resultBag;

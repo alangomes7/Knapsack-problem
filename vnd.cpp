@@ -65,6 +65,7 @@ Bag* VND::run(int bagSize, const Bag* initialBag,
             2000,
             deadline
         );
+        currentBagSearch->setMovementType(movements[k]);
 
         m_metaheuristicHelper.makeItFeasible(*currentBagSearch, bagSize, dependencyGraph);
 

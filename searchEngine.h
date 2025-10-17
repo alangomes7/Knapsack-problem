@@ -38,6 +38,8 @@ public:
                      Algorithm::LOCAL_SEARCH localSearchMethod,
                      const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
                      int maxIterationsWithoutImprovement, int maxIterations, const std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double, std::nano>>& deadline);
+    int getSeed() const;
+    std::mt19937& getRandomGenerator();
 
 private:
     // --- Core Private Logic ---
@@ -72,6 +74,7 @@ private:
                               std::vector<Package*>& packagesOutsideBag);
     
     std::mt19937 m_rng;
+    int m_seed;
 };
 
 #endif // SEARCH_ENGINE_H

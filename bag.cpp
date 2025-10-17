@@ -52,6 +52,11 @@ Algorithm::LOCAL_SEARCH Bag::getBagLocalSearch() const {
     return m_localSearch;
 }
 
+SearchEngine::MovementType Bag::getMovementType() const
+{
+    return m_movementType;
+}
+
 /**
  * @brief Gets the execution time of the algorithm.
  * @return The execution time in seconds.
@@ -199,6 +204,11 @@ void Bag::setLocalSearch(Algorithm::LOCAL_SEARCH localSearch) {
  */
 void Bag::setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm) {
     m_bagAlgorithm = bagAlgorithm;
+}
+
+void Bag::setMovementType(SearchEngine::MovementType movementType)
+{
+    m_movementType = movementType;
 }
 
 /**
@@ -362,3 +372,28 @@ std::string Bag::toString() const {
     }
     return bagString;
 }
+
+std::string Bag::toString(SearchEngine::MovementType movement) const
+{
+    switch (movement)
+    {
+    case SearchEngine::MovementType::ADD:
+        return "ADD";
+    case SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1:
+        return "SWAP_REMOVE_1_ADD_1";
+    case SearchEngine::MovementType::SWAP_REMOVE_1_ADD_2:
+        return "SWAP_REMOVE_1_ADD_2";
+    case SearchEngine::MovementType::SWAP_REMOVE_2_ADD_1:
+        return "SWAP_REMOVE_2_ADD_1";
+    default:
+    return "EJECTION_CHAIN";
+    }
+}
+
+    std::vector<SearchEngine::MovementType> movements = {
+        SearchEngine::MovementType::ADD,
+        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1,
+        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_2,
+        SearchEngine::MovementType::SWAP_REMOVE_2_ADD_1,
+        SearchEngine::MovementType::EJECTION_CHAIN
+    };

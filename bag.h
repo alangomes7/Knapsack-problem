@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include "algorithm.h"
+#include "searchEngine.h"
 
 class Package;
 class Dependency;
@@ -27,6 +28,7 @@ public:
     int getBenefit() const;
     Algorithm::ALGORITHM_TYPE getBagAlgorithm() const;
     Algorithm::LOCAL_SEARCH getBagLocalSearch() const;
+    SearchEngine::MovementType getMovementType() const;
     double getAlgorithmTime() const;
     std::string getTimestamp() const;
     const std::string& getMetaheuristicParameters() const;
@@ -36,6 +38,7 @@ public:
     void setAlgorithmTime(double seconds);
     void setLocalSearch(Algorithm::LOCAL_SEARCH localSearch);
     void setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm);
+    void setMovementType(SearchEngine::MovementType movementType);
     void setMetaheuristicParameters(const std::string& params);
 
     // --- Core Bag Operations ---
@@ -78,9 +81,12 @@ public:
     // --- Utility ---
     std::string toString() const;
 
+    std::string toString(SearchEngine::MovementType movement) const;
+
 private:
     Algorithm::ALGORITHM_TYPE m_bagAlgorithm;
     Algorithm::LOCAL_SEARCH m_localSearch;
+    SearchEngine::MovementType m_movementType;
     std::string m_timeStamp = "0000-00-00 00:00:00";
     int m_size;
     int m_benefit;

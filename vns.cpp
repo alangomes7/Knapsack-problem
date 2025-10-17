@@ -65,6 +65,7 @@ Bag* VNS::run(int bagSize, const Bag* initialBag,
             2000,
             deadline
         );
+        shakenBag->setMovementType(movements[k]);
         m_metaheuristicHelper.makeItFeasible(*shakenBag, bagSize, dependencyGraph);
 
         // --- Acceptance criterion ---

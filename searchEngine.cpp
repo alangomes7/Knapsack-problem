@@ -11,7 +11,7 @@
 // Public Methods
 // =====================================================================================
 
-SearchEngine::SearchEngine(unsigned int seed) : m_rng(seed) {}
+SearchEngine::SearchEngine(unsigned int seed) : m_rng(seed), m_seed(seed) {}
 
 // =====================================================================================
 // Local Search (single movement type)
@@ -54,6 +54,16 @@ void SearchEngine::localSearch(
         if (!improvementFound)
             ++iterationsWithoutImprovement;
     }
+}
+
+int SearchEngine::getSeed() const
+{
+    return m_seed;
+}
+
+std::mt19937 & SearchEngine::getRandomGenerator()
+{
+    return m_rng;
 }
 
 // =====================================================================================

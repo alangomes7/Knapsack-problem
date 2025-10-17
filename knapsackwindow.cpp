@@ -45,12 +45,12 @@ void KnapsackWindow::initializeUiElements()
     QIntValidator* validator = new QIntValidator(0, 100, this);
     ui->lineEdit_seed->setValidator(validator);
 
-    ui->lineEdit_seed->setText(QString::number(15));
+    ui->lineEdit_seed->setText(QString::number(50));
 
     ui->plainTextEdit_logs->setReadOnly(true);
     ui->comboBox_algorithm->addItem("Select Algorithm");
     ui->label_bagCapacityNumber->setText(QString::number(m_bagSize) + " MB");
-    int executionTime = 20;
+    int executionTime = 30;
     for(int i = 2; i <= 4; i++){
         ui->comboBox_executionTime->addItem(QString::number(executionTime) + " s");
         executionTime = executionTime * i;
@@ -154,7 +154,7 @@ void KnapsackWindow::saveData()
 
     QTextStream out(&file);
     if (file.size() == 0) {
-        out << "Algoritmo,File name,Timestamp,Tempo de Processamento (s),Pacotes,Depenências,Peso da mochila,Benefício mochila\n";
+        out << "Algoritmo, Movement,File name,Timestamp,Tempo de Processamento (s),Pacotes,Depenências,Peso da mochila,Benefício mochila\n";
     }
     int bagNumber = static_cast<int>(m_bags.size());
     int i = 0;
@@ -165,6 +165,7 @@ void KnapsackWindow::saveData()
         QString algoritmo = QString::fromStdString(
             getAlgorithmLabel(bagData->getBagAlgorithm(), bagData->getBagLocalSearch())
         );
+        QString movement      = QString::fromStdString(bagData->toString(bagData->getMovementType()));
         QString fileName      = QFileInfo(m_filePath).fileName();
         QString timestamp     = QString::fromStdString(bagData->getTimestamp());
         double processingTime = bagData->getAlgorithmTime();
@@ -174,6 +175,7 @@ void KnapsackWindow::saveData()
         int bagBenefit        = bagData->getBenefit();
 
         out << algoritmo << ","
+            << movement << ","
             << fileName << ","
             << timestamp << ","
             << QString::number(processingTime, 'f', 5) << ","
