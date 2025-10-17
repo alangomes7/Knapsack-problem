@@ -1,0 +1,11 @@
+Algoritmo, Movement,File name,Timestamp,Tempo de Processamento (s),Pacotes,Depenências,Peso da mochila,Benefício mochila
+RANDOM,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-17 00:01:35,0.00042,21,76,12180,5816
+GREEDY -> Package: Benefit Ratio,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-17 00:01:35,0.00037,28,79,12085,9868
+GREEDY -> Package: Benefit,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-17 00:01:35,0.00032,25,77,12105,9515
+GREEDY -> Package: Size,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-17 00:01:35,0.00037,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-17 00:01:35,0.00034,23,77,12171,9164
+RANDOM_GREEDY (Package: Benefit Ratio),EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-17 00:01:35,0.00037,27,81,12148,9644
+RANDOM_GREEDY (Package: Size),EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-17 00:01:35,0.00040,26,79,12071,8355
+VND,ADD,instancia_original.knapsack.txt,2025-10-17 00:01:35,7.64907,32,80,12158,11440
+VNS,ADD,instancia_original.knapsack.txt,2025-10-17 00:01:35,6.80569,32,80,12158,11440
+GRASP,SWAP_REMOVE_1_ADD_2,instancia_original.knapsack.txt,2025-10-17 00:01:35,30.00390,33,82,12113,11768

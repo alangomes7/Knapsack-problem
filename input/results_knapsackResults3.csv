@@ -1,0 +1,21 @@
+Algoritmo, Movement,File name,Timestamp,Tempo de Processamento (s),Pacotes,Depenências,Peso da mochila,Benefício mochila
+RANDOM,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 22:49:28,0.00032,16,75,12165,5268
+GREEDY -> Package: Benefit Ratio,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 22:49:28,0.00038,28,79,12085,9868
+GREEDY -> Package: Benefit,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 22:49:28,0.00027,25,77,12105,9515
+GREEDY -> Package: Size,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 22:49:28,0.00029,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 22:49:28,0.00028,20,76,12100,8501
+RANDOM_GREEDY (Package: Benefit Ratio),EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 22:49:28,0.00030,25,80,12150,9198
+RANDOM_GREEDY (Package: Size),EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 22:49:28,0.00032,30,80,12180,9255
+VND,ADD,instancia_original.knapsack.txt,2025-10-16 22:49:28,7.22904,32,80,12158,11440
+VNS,ADD,instancia_original.knapsack.txt,2025-10-16 22:49:28,7.14447,32,80,12158,11440
+GRASP,SWAP_REMOVE_2_ADD_1,instancia_original.knapsack.txt,2025-10-16 22:49:28,0.10646,28,79,12085,9868
+RANDOM,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 23:56:55,0.00053,17,76,12119,4864
+GREEDY -> Package: Benefit Ratio,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 23:56:55,0.00039,28,79,12085,9868
+GREEDY -> Package: Benefit,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 23:56:55,0.00033,25,77,12105,9515
+GREEDY -> Package: Size,EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 23:56:55,0.00035,29,81,12171,8668
+RANDOM_GREEDY (Package: Benefit),EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 23:56:55,0.00039,25,77,12177,9378
+RANDOM_GREEDY (Package: Benefit Ratio),EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 23:56:55,0.00037,26,78,12123,9421
+RANDOM_GREEDY (Package: Size),EJECTION_CHAIN,instancia_original.knapsack.txt,2025-10-16 23:56:55,0.00035,27,81,12174,7880
+VND,ADD,instancia_original.knapsack.txt,2025-10-16 23:56:55,8.08294,32,80,12158,11440
+VNS,ADD,instancia_original.knapsack.txt,2025-10-16 23:56:55,8.42640,32,80,12158,11440
+GRASP | Best Improvement,SWAP_REMOVE_2_ADD_1,instancia_original.knapsack.txt,2025-10-16 23:56:55,30.00422,33,82,12113,11768
