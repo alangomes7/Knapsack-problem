@@ -16,6 +16,8 @@
 #include <sstream>
 #include <random>
 
+#include "metaheuristichelper.h"
+
 KnapsackWindow::KnapsackWindow(QWidget *parent)
     : QMainWindow(parent),
       ui(new Ui::KnapsackWindow),
@@ -44,17 +46,14 @@ void KnapsackWindow::initializeUiElements()
     QIntValidator* validator = new QIntValidator(0, 100, this);
     ui->lineEdit_seed->setValidator(validator);
 
-    ui->lineEdit_seed->setText(QString::number(50));
+    MetaheuristicHelper* metaheuristicHelper = new MetaheuristicHelper();
+    ui->lineEdit_seed->setText(QString::number(metaheuristicHelper->randomNumberInt(0,1000)));
 
     ui->plainTextEdit_logs->setReadOnly(true);
     ui->comboBox_algorithm->addItem("Select Algorithm");
     ui->label_bagCapacityNumber->setText(QString::number(m_bagSize) + " MB");
-    int executionTime = 30;
-    for(int i = 2; i <= 4; i++){
-        ui->comboBox_executionTime->addItem(QString::number(executionTime) + " s");
-        executionTime = executionTime * i;
-    }
-    
+    int executionTime = 89.9;
+    ui->comboBox_executionTime->addItem(QString::number(executionTime) + " s");
 }
 
 void KnapsackWindow::setupConnections() {
@@ -84,6 +83,7 @@ void KnapsackWindow::onFilePathButtonClicked() {
 }
 
 void KnapsackWindow::onRunButtonClicked() {
+
     for (Bag* bag : m_bags) {
         delete bag;
     }
@@ -104,8 +104,8 @@ void KnapsackWindow::onRunButtonClicked() {
     std::string timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss").toStdString();
     int executionTime = (ui->comboBox_executionTime->currentText().remove("s")).toInt();
 
-    m_algorithm = new Algorithm(executionTime);
-    m_bags = m_algorithm->run(Algorithm::ALGORITHM_TYPE::RANDOM, m_bagSize, packagesVec, dependenciesVec, timestamp);
+    int seed = ui->lineEdit_seed->text().toInt();
+    m_algorithm = new Algorithm(executionTime, seed);
 
     // Clear and populate ComboBox with normalized labels
     ui->comboBox_algorithm->clear();
@@ -120,8 +120,23 @@ void KnapsackWindow::onRunButtonClicked() {
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::VNS, Algorithm::LOCAL_SEARCH::NONE)));
     ui->comboBox_algorithm->addItem(QString::fromStdString(getAlgorithmLabel(Algorithm::ALGORITHM_TYPE::GRASP, Algorithm::LOCAL_SEARCH::NONE)));
 
+    int maxTimeRunning = 3;
+    int estimatedBagCount = 30;
+
+    // Reserve space upfront (avoids repeated memory reallocations)
+    m_bags.reserve(m_bags.size() + maxTimeRunning * estimatedBagCount);
     FileProcessor fileProcessor(m_filePath.toStdString());
-    fileProcessor.saveData(m_bags);
+
+    for (int i = 0; i < maxTimeRunning; ++i) {
+        // Run the algorithm once per iteration
+        std::vector<Bag *> bags = m_algorithm->run(Algorithm::ALGORITHM_TYPE::RANDOM, m_bagSize, packagesVec, dependenciesVec, timestamp);
+        fileProcessor.saveData(bags);
+
+        // Move the pointers directly instead of copying
+        m_bags.insert(m_bags.end(), std::make_move_iterator(bags.begin()), std::make_move_iterator(bags.end()));
+    }
+    
+    fileProcessor.saveReport(m_bags, packagesVec, dependenciesVec, seed, timestamp);
 }
 
 void KnapsackWindow::onAlgorithmChanged() {

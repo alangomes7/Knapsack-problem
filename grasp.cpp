@@ -148,6 +148,13 @@ void GRASP::graspWorker(WorkerContext context) {
     // Update global statistics
     m_totalIterations += localIterations;
     m_improvements += localImprovements;
+    (*context.bestBagOverall)->setMetaheuristicParameters(
+        "Alpha: " + std::to_string(m_alpha) + 
+        " | Improvements: " + std::to_string(m_improvements) +
+        " | RCL size: " + std::to_string(m_rclSize) +
+        " | Total iterations: " + std::to_string(m_totalIterations)
+    );
+
 }
 
 // ===============================================================

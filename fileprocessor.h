@@ -3,9 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <unordered_map>
 
-// Forward declarations of custom types
 class Package;
 class Dependency;
 class Bag;
@@ -35,17 +33,16 @@ public:
     void saveData(const std::vector<Bag*>& bags);
 
     /**
-     * @brief Saves a detailed report for the best solution.
-     * @param bags Vector of solutions.
-     * @param allPackages A map of all available packages.
-     * @param allDependencies A map of all available dependencies.
+     * @brief Saves a detailed report of the best solution found.
+     * @param bags A vector of Bag pointers, representing all the solutions found.
+     * @param allPackages A vector containing pointers to all possible packages.
+     * @param allDependencies A vector containing pointers to all possible dependencies.
      * @param seed The random seed used for the experiment.
-     * @param filePath The original input file path.
-     * @param timestamp The timestamp of the execution.
+     * @param timestamp The timestamp of when the experiment was run.
      */
     void saveReport(const std::vector<Bag*>& bags,
-                                const std::unordered_map<std::string, Package*>& allPackages,
-                                const std::unordered_map<std::string, Dependency*>& allDependencies,
+                                const std::vector<Package*>& allPackages,
+                                const std::vector<Dependency*>& allDependencies,
                                 unsigned int seed, const std::string& timestamp);
 
     std::string backslashesPathToSlashesPath(std::string backslashesPath);
