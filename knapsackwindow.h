@@ -15,6 +15,9 @@ public:
     explicit knapsackWindow(QWidget *parent = nullptr);
     ~knapsackWindow();
 
+private slots:
+    void on_pushButton_problem_clicked();
+
 private:
     Ui::knapsackWindow *ui;
 };
