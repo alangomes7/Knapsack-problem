@@ -1,258 +1,268 @@
-#include "FileProcessor.h"
-#include "algorithm.h"
+#include "fileprocessor.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <string_view>
 #include <filesystem>
 #include <algorithm>
 #include <iomanip>
 #include <unordered_set>
+#include <stdexcept>
 
 #include "bag.h"
 #include "package.h"
 #include "dependency.h"
+//#include "algorithm.h"
 
-FileProcessor::FileProcessor(const std::string& filePath)
-    : fileinputPath(filePath)
-{
-    std::filesystem::path inputPath(fileinputPath);
-    std::string directory = inputPath.parent_path().string();
+namespace FileProcessor {
+
+// ────────────────────────────────────────────────
+// Helper: only visible inside this translation unit
+// ────────────────────────────────────────────────
+static std::vector<int> parseVector(const std::string& line) {
+    std::vector<int> vec;
+
+    auto first = line.find('[');
+    auto last = line.find_last_of(']');
+    if (first == std::string::npos || last == std::string::npos || last <= first)
+        return vec;
+
+    std::string_view view(line.c_str() + first + 1, last - first - 1);
+    std::string token;
+    std::istringstream stream{std::string(view)};
     
-    // Base output folder
-    m_output_dir = backslashesPathToSlashesPath(directory + "/output");
-    
-    try {
-        int counter = 1;
-        std::string newOutputDir = m_output_dir;
-        
-        // Keep iterating until we successfully create a new folder
-        while (std::filesystem::exists(newOutputDir)) {
-            std::ostringstream oss;
-            oss << m_output_dir << "-" << counter++;
-            newOutputDir = oss.str();
-        }
-        
-        if (std::filesystem::create_directory(newOutputDir)) {
-            m_output_dir = newOutputDir;
-            std::cout << "Directory '" << m_output_dir << "' created successfully." << std::endl;
-        } else {
-            std::cerr << "Error: Failed to create directory '" << newOutputDir << "'." << std::endl;
-        }
-        
-    } catch (const std::filesystem::filesystem_error& e) {
-        std::cerr << "Filesystem error: " << e.what() << std::endl;
+    while (std::getline(stream, token, ',')) {
+        auto start = token.find_first_not_of(" \t");
+        if (start == std::string::npos) continue;
+        auto end = token.find_last_not_of(" \t");
+        vec.push_back(std::stoi(token.substr(start, end - start + 1)));
     }
 
-    readFile();
+    return vec;
 }
 
-const std::string FileProcessor::getPath() const
-{
-    return fileinputPath;
-}
+// ────────────────────────────────────────────────
+// Everything else stays inside FileProcessor
+// ────────────────────────────────────────────────
 
-const std::vector<std::vector<std::string>>& FileProcessor::getProcessedData() const
-{
-    return m_processedData;
-}
+ProblemInstance loadProblem(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open())
+        throw std::runtime_error("Could not open problem file: " + filename);
 
-void FileProcessor::readFile()
-{
-    std::ifstream fileinput(fileinputPath);
-
-    // Check if the file was opened successfully.
-    if (!fileinput.is_open()) {
-        std::cerr << "Error: Could not open file " << fileinputPath << std::endl;
-        return;
-    }
-
+    ProblemInstance problemInstance;
     std::string line;
-    // Read the file line by line.
-    while (std::getline(fileinput, line)) {
-        std::stringstream ss(line);
-        std::string word;
-        std::vector<std::string> words;
 
-        // Split the line into words based on whitespace.
-        while (ss >> word) {
-            words.push_back(word);
-        }
+    // 1. Read header line
+    std::getline(file, line);
+    std::stringstream ss(line);
+    int m, n, ne; // m=packages, n=dependencies, ne=edges
+    ss >> m >> n >> ne >> problemInstance.maxCapacity;
 
-        // Add the list of words to our data structure if the line was not empty.
-        if (!words.empty()) {
-            m_processedData.push_back(words);
-        }
+    // Reserve space for efficiency
+    problemInstance.packages.reserve(m);
+    problemInstance.dependencies.reserve(n);
+
+    // 2. Read package benefits and create Package objects
+    std::getline(file, line);
+    std::stringstream sb(line);
+    int b;
+    int p_idx = 0;
+    while (sb >> b) {
+        // Assuming Package(std::string name, int benefit) constructor
+        problemInstance.packages.push_back(new Package("P" + std::to_string(p_idx++), b));
     }
+    if (problemInstance.packages.size() != m) {
+        throw std::runtime_error("Package count mismatch in " + filename);
+    }
+
+    // 3. Read dependency weights and create Dependency objects
+    std::getline(file, line);
+    std::stringstream sw(line);
+    int w;
+    int d_idx = 0;
+    while (sw >> w) {
+        // Assuming Dependency(std::string name, int weight) constructor
+        problemInstance.dependencies.push_back(new Dependency("D" + std::to_string(d_idx++), w));
+    }
+    if (problemInstance.dependencies.size() != n) {
+        throw std::runtime_error("Dependency count mismatch in " + filename);
+    }
+
+    // 4. Read edge list and link objects
+    // This assumes Package has a method like addDependency(Dependency* dep)
+    int p, d;
+    for (int i = 0; i < ne; ++i) {
+         if (!std::getline(file, line)) {
+             throw std::runtime_error("Unexpected end of file reading edges in " + filename);
+         }
+         std::stringstream sp(line);
+         if (sp >> p >> d) {
+             // Add boundary checks
+             if (p < 0 || p >= m || d < 0 || d >= n) {
+                 throw std::runtime_error("Invalid package/dependency index in " + filename);
+             }
+             // This method MUST exist in your Package class
+             problemInstance.packages[p]->addDependency(*problemInstance.dependencies[d]);
+         }
+    }
+
+    std::cout << "-> Problem file loaded (Object-oriented): " << filename << "\n";
+    return problemInstance;
 }
 
-void FileProcessor::saveData(const std::vector<Bag*>& bags)
+void saveData(const std::vector<Bag*>& bags,
+              const std::string& outputDir,
+              const std::string& inputFilename)
 {
-    if (bags.empty()) return;
+    if (bags.empty() || outputDir.empty()) return;
 
-    // Construct the output CSV file path using std::filesystem.
-    const std::string csvFile = m_output_dir + "/results_knapsackResults.csv";
-
-    // Open the file in append mode.
+    const std::string csvFile = outputDir + "/summary_results.csv";
     std::ofstream outFile(csvFile, std::ios::app);
     if (!outFile.is_open()) {
         std::cerr << "Error: Could not create or open " << csvFile << std::endl;
         return;
     }
 
-    // Write header only if the file is new or empty.
-    outFile.seekp(0, std::ios::end);
     if (outFile.tellp() == 0) {
-        outFile << "Algoritmo,Movement,File name,Timestamp,Tempo de Processamento (s),Pacotes,Depenências,Peso da mochila,Benefício mochila\n";
+        outFile << "Algorithm,Movement,File name,Timestamp,Processing Time (s),"
+                   "Packages,Dependencies,Bag Weight,Bag Benefit\n";
     }
 
-    std::filesystem::path inputPath(fileinputPath);
-    std::string fileName = inputPath.filename().string();
+    for (const Bag* bag : bags) {
+        if (!bag) continue;
 
-    // Write data for each bag (solution).
-    for (const Bag *bagData : bags) {
-        if (!bagData) continue;
+        // Algorithm algHelper(0,0);
+        std::string algStr = "algHelper.toString(bag->getBagAlgorithm())";
+        std::string locStr = "algHelper.toString(bag->getBagLocalSearch())";
+        if (locStr != "None") algStr += " | " + locStr;
 
-        Algorithm algorithmHelper(0);
-        std::string algoritmo = algorithmHelper.toString(bagData->getBagAlgorithm());
-        std::string localSearch = algorithmHelper.toString(bagData->getBagLocalSearch());
-        if(localSearch != "None"){
-            algoritmo = algoritmo + " | " + localSearch;
-        }
-        std::string movement =  bagData->toString(bagData->getMovementType());
-        std::string timestamp = bagData->getTimestamp();
-        double processingTime = bagData->getAlgorithmTime();
-
-        outFile << algoritmo << ","
-                << movement << ","
-                << fileName << ","
-                << timestamp << ","
-                << std::fixed << std::setprecision(5) << processingTime << ","
-                << bagData->getPackages().size() << ","
-                << bagData->getDependencies().size() << ","
-                << bagData->getSize() << ","
-                << bagData->getBenefit() << "\n";
+        outFile << algStr << ","
+                << bag->toString(bag->getMovementType()) << ","
+                << inputFilename << ","
+                << bag->getTimestamp() << ","
+                << std::fixed << std::setprecision(5) << bag->getAlgorithmTime() << ","
+                << bag->getPackages().size() << ","
+                << bag->getDependencies().size() << ","
+                << bag->getSize() << ","
+                << bag->getBenefit() << "\n";
     }
-
-    outFile.close();
-    std::cout << "CSV written to " << csvFile << std::endl;
 }
 
-    /**
-     * @brief Saves a detailed report of the best solution found.
-     * @param bags A vector of Bag pointers, representing all the solutions found.
-     * @param allPackages A vector containing pointers to all possible packages.
-     * @param allDependencies A vector containing pointers to all possible dependencies.
-     * @param seed The random seed used for the experiment.
-     * @param timestamp The timestamp of when the experiment was run.
-     */
-    void FileProcessor::saveReport(const std::vector<Bag*>& bags,
-                                const std::vector<Package*>& allPackages,
-                                const std::vector<Dependency*>& allDependencies,
-                                unsigned int seed, const std::string& timestamp) {
-    if (bags.empty()) {
-        std::cerr << "Error: Cannot generate report from an empty set of solutions." << std::endl;
+void saveReport(const std::vector<Bag*>& bags,
+                const std::vector<Package*>& allPackages,
+                const std::vector<Dependency*>& allDependencies,
+                unsigned int seed,
+                const std::string& timestamp,
+                const std::string& outputDir,
+                const std::string& inputFilename)
+{
+    if (bags.empty() || outputDir.empty()) {
+        std::cerr << "Error: Cannot generate report from empty set." << std::endl;
         return;
     }
 
-    // Find the best bag (solution with the highest benefit).
-    auto bestBagIt = std::max_element(bags.begin(), bags.end(), [](const Bag* a, const Bag* b) {
-        return a->getBenefit() < b->getBenefit();
-    });
-    const Bag* bestBag = *bestBagIt;
+    const Bag* bestBag = *std::max_element(bags.begin(), bags.end(),
+        [](const Bag* a, const Bag* b){ return a->getBenefit() < b->getBenefit(); });
 
-    // Create a unique report filename.
-    const std::string csvFile = m_output_dir + "/results_knapsackResults.csv";
-
-    std::filesystem::path inputPath(fileinputPath);
-    std::string output_dir = m_output_dir;
-    if (output_dir.empty()) {
-        output_dir = ".";
-    }
-
+    std::filesystem::path inputPath(inputFilename);
     std::string stem = inputPath.stem().string();
-    std::string reportFileName = output_dir + "/report_" + stem + "_" + formatTimestampForFilename(timestamp) + ".txt";
+    std::string reportFileName = outputDir + "/report_" + stem + "_" +
+                                 formatTimestampForFilename(timestamp) + ".txt";
 
-    // Write the report file.
-    std::ofstream outFile(reportFileName);
-    if (!outFile.is_open()) {
-        std::cerr << "Error: Could not open " << reportFileName << " for writing." << std::endl;
+    std::ofstream out(reportFileName);
+    if (!out.is_open()) {
+        std::cerr << "Error: Could not open " << reportFileName << "\n";
         return;
     }
 
-    outFile << "--- Experiment Reproduction Report for " << inputPath.filename().string() << " ---\n";
+    //Algorithm algHelper(0,0);
+    std::string algStr = "algHelper.toString(bestBag->getBagAlgorithm())";
+    std::string locStr = "algHelper.toString(bestBag->getBagLocalSearch())";
+    if (locStr != "None") algStr += " | " + locStr;
 
-    Algorithm algorithmAux(0);
-    std::string algoritmo = algorithmAux.toString(bestBag->getBagAlgorithm());
-    std::string localSearch = algorithmAux.toString(bestBag->getBagLocalSearch());
-    if(localSearch != "None"){
-        algoritmo = algoritmo + " | " + localSearch;
-    }
-    outFile << "Methaeuristic: " << algoritmo << "\n";
-    outFile << "Benefit Value: " << bestBag->getBenefit() << "\n";
-    outFile << "Total Disk Space (Dependencies): " << bestBag->getSize() << " MB\n";
-    outFile << "Solution (Binary Vectors):\n";
+    out << "--- Experiment Reproduction Report for " << inputFilename << " ---\n";
+    out << "Metaheuristic: " << algStr << "\n";
+    out << "Benefit Value: " << bestBag->getBenefit() << "\n";
+    out << "Total Disk Space (Dependencies): " << bestBag->getSize() << " MB\n";
 
-    // --- Packages Vector ---
-    std::unordered_set<std::string> solutionPackages;
-    for (const auto& pkg : bestBag->getPackages()) {
-        solutionPackages.insert(pkg->getName());
-    }
+    // Print binary vectors
+    std::unordered_set<std::string> packSet, depSet;
+    for (auto* p : bestBag->getPackages()) packSet.insert(p->getName());
+    for (auto* d : bestBag->getDependencies()) depSet.insert(d->getName());
 
-    std::vector<std::string> allPackageNames;
-    allPackageNames.reserve(allPackages.size());
-    // *** MODIFIED HERE: Iterate over vector of pointers ***
-    for (const auto& pkg : allPackages) {
-        allPackageNames.push_back(pkg->getName());
-    }
-    std::sort(allPackageNames.begin(), allPackageNames.end());
+    std::vector<std::string> pkgNames, depNames;
+    for (auto* p : allPackages) pkgNames.push_back(p->getName());
+    for (auto* d : allDependencies) depNames.push_back(d->getName());
+    std::sort(pkgNames.begin(), pkgNames.end());
+    std::sort(depNames.begin(), depNames.end());
 
-    outFile << "[";
-    for (size_t i = 0; i < allPackageNames.size(); ++i) {
-        outFile << (solutionPackages.count(allPackageNames[i]) ? "1" : "0")
-                << (i == allPackageNames.size() - 1 ? "" : ", ");
-    }
-    outFile << "]\n";
+    out << "[";
+    for (size_t i=0;i<pkgNames.size();++i)
+        out << (packSet.count(pkgNames[i]) ? "1" : "0")
+            << (i+1<pkgNames.size()?", ":"");
+    out << "]\n[";
 
-    // --- Dependencies Vector ---
-    std::unordered_set<std::string> solutionDependencies;
-    for (const auto& dep : bestBag->getDependencies()) {
-        solutionDependencies.insert(dep->getName());
-    }
+    for (size_t i=0;i<depNames.size();++i)
+        out << (depSet.count(depNames[i]) ? "1" : "0")
+            << (i+1<depNames.size()?", ":"");
+    out << "]\n";
 
-    std::vector<std::string> allDependencyNames;
-    allDependencyNames.reserve(allDependencies.size());
-    // *** MODIFIED HERE: Iterate over vector of pointers ***
-    for (const auto& dep : allDependencies) {
-        allDependencyNames.push_back(dep->getName());
-    }
-    std::sort(allDependencyNames.begin(), allDependencyNames.end());
-    
-    outFile << "[";
-    for (size_t i = 0; i < allDependencyNames.size(); ++i) {
-        outFile << (solutionDependencies.count(allDependencyNames[i]) ? "1" : "0")
-                << (i == allDependencyNames.size() - 1 ? "" : ", ");
-    }
-    outFile << "]\n";
+    out << "Metaheuristic Parameters: "
+        << (bestBag->getMetaheuristicParameters().empty()
+            ? "N/A" : bestBag->getMetaheuristicParameters()) << "\n";
+    out << "Random Seed: " << seed << "\n";
+    out << "Execution Time: " << std::fixed << std::setprecision(5)
+        << bestBag->getAlgorithmTime() << " s\n";
+    out << "Timestamp: " << timestamp << "\n";
 
-    // --- Report Footer ---
-    outFile << "Metaheuristic Parameters: " << (bestBag->getMetaheuristicParameters().empty() ? "N/A" : bestBag->getMetaheuristicParameters()) << "\n";
-    outFile << "Random Seed: " << seed << "\n";
-    outFile << "Execution Time: " << std::fixed << std::setprecision(5) << bestBag->getAlgorithmTime() << " seconds\n";
-    outFile << "Timestamp: " << timestamp << "\n";
-    
-    outFile.close();
-    std::cout << "\nDetailed report saved to " << reportFileName << std::endl;
+    std::cout << "Detailed report saved to " << reportFileName << "\n";
 }
 
-std::string FileProcessor::backslashesPathToSlashesPath(std::string backslashesPath){
-    std::string slashesPath = backslashesPath;
-    std::replace(slashesPath.begin(), slashesPath.end(), '\\', '/');
-    return slashesPath;
+std::string backslashesPathToSlashesPath(const std::string& s) {
+    std::string r=s;
+    std::replace(r.begin(), r.end(),'\\','/');
+    return r;
 }
 
-std::string FileProcessor::formatTimestampForFilename(std::string timestamp) {
-    std::replace(timestamp.begin(), timestamp.end(), ' ', '_');
-    std::replace(timestamp.begin(), timestamp.end(), ':', '_');
-    return timestamp;
+std::string formatTimestampForFilename(const std::string& ts) {
+    std::string t=ts;
+    std::replace(t.begin(),t.end(),' ', '_');
+    std::replace(t.begin(),t.end(),':','-');
+    return t;
 }
+
+std::string createUniqueOutputDir(const std::string& base) {
+    std::string dir=base;
+    int c=1;
+    while (std::filesystem::exists(dir))
+        dir=base + "-" + std::to_string(c++);
+    std::filesystem::create_directory(dir);
+    return dir;
+}
+
+SolutionReport loadReport(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open())
+        throw std::runtime_error("Could not open report file: " + filename);
+
+    SolutionReport rep;
+    std::string line;
+    while (std::getline(file,line)) {
+        if (line.starts_with("Benefit Value: "))
+            rep.reportedBenefit = std::stol(line.substr(15));
+        else if (line.starts_with("Total Disk Space (Dependencies): "))
+            rep.reportedWeight = std::stol(line.substr(33));
+        else if (line.starts_with("[")) {
+            if (rep.packageVector.empty())
+                rep.packageVector = parseVector(line);
+            else if (rep.dependencyVector.empty())
+                rep.dependencyVector = parseVector(line);
+        }
+    }
+    std::cout<<"-> Report file loaded: "<<filename<<"\n";
+    return rep;
+}
+
+} // namespace FileProcessor

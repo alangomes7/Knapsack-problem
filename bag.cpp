@@ -356,10 +356,10 @@ std::vector<const Package*> Bag::getInvalidPackages(
 // Utility Methods
 // =====================================================================================
 std::string Bag::toString() const {
-    Algorithm algoHelper(0);
+    ///Algorithm algoHelper(0,0);
     std::string bagString;
 
-    bagString += "Algorithm: " + algoHelper.toString(m_bagAlgorithm) + " | " + algoHelper.toString(m_localSearch) + "\n";
+    //bagString += "Algorithm: " + algoHelper.toString(m_bagAlgorithm) + " | " + algoHelper.toString(m_localSearch) + "\n";
     bagString += "Bag size: " + std::to_string(m_size) + "\n";
     bagString += "Total Benefit: " + std::to_string(m_benefit) + "\n"; // Added benefit
     bagString += "Execution Time: " + std::to_string(m_algorithmTimeSeconds) + "s\n";

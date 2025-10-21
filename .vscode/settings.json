@@ -1,43 +1,9 @@
 {
-    // ------------------------------------------------------------------------
-    // VS Code CMake Tools Extension Settings (cmake.*)
-    //
-    // These settings control the behavior of the CMake Tools extension, which
-    // manages the configuration, build, and debugging of your project.
-    // ------------------------------------------------------------------------
-
-    // Specifies the directory where all build artifacts (like Makefiles, object files,
-    // and the final executable) will be stored. Using a "build" subdirectory is a standard practice.
-    "cmake.buildDirectory": "${workspaceFolder}/build",
-
-    // If true, CMake Tools will automatically run the 'configure' step whenever you
-    // open a project containing a CMakeLists.txt file. This is a great convenience feature.
-    "cmake.configureOnOpen": true,
-
-    // Sets the default build type for CMake. "Debug" includes debugging symbols and disables
-    // most optimizations, which is essential for using the debugger. Other common values
-    // are "Release" for optimized code and "RelWithDebInfo" (Release with Debug Info).
-    "cmake.defaultCMakeBuildType": "Debug",
-
-    // Defines variables to be passed to CMake during the configuration step (like `cmake -D<key>=<value>`).
-    "cmake.configureSettings": {
-        // This is crucial for helping CMake find external libraries like Qt.
-        // It tells CMake to look in this directory for library headers, binaries, and configuration files.
-        "CMAKE_PREFIX_PATH": "C:\\Programs_Others\\Qt\\6.9.0\\msvc2022_64"
-    },
-
-    // ------------------------------------------------------------------------
-    // VS Code Editor Settings (files.*)
-    // ------------------------------------------------------------------------
-
-    // Associates file patterns with a specific language mode for syntax highlighting and other features.
     "files.associations": {
-        "qapplication": "cpp",
-        "unordered_map": "cpp",
-        "algorithm": "cpp",
         "atomic": "cpp",
         "bit": "cpp",
         "cctype": "cpp",
+        "clocale": "cpp",
         "cmath": "cpp",
         "compare": "cpp",
         "concepts": "cpp",
@@ -49,19 +15,40 @@
         "ctime": "cpp",
         "cwchar": "cpp",
         "exception": "cpp",
+        "fstream": "cpp",
         "initializer_list": "cpp",
+        "iomanip": "cpp",
+        "ios": "cpp",
         "iosfwd": "cpp",
+        "iostream": "cpp",
+        "istream": "cpp",
+        "iterator": "cpp",
         "limits": "cpp",
         "list": "cpp",
         "memory": "cpp",
         "new": "cpp",
+        "numeric": "cpp",
+        "ostream": "cpp",
+        "sstream": "cpp",
+        "stdexcept": "cpp",
+        "streambuf": "cpp",
         "string": "cpp",
+        "system_error": "cpp",
         "tuple": "cpp",
         "type_traits": "cpp",
         "typeinfo": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
         "utility": "cpp",
         "vector": "cpp",
+        "xfacet": "cpp",
         "xhash": "cpp",
+        "xiosbase": "cpp",
+        "xlocale": "cpp",
+        "xlocinfo": "cpp",
+        "xlocmon": "cpp",
+        "xlocnum": "cpp",
+        "xloctime": "cpp",
         "xmemory": "cpp",
         "xstddef": "cpp",
         "xstring": "cpp",
@@ -70,64 +57,38 @@
         "array": "cpp",
         "charconv": "cpp",
         "chrono": "cpp",
-        "clocale": "cpp",
+        "codecvt": "cpp",
         "condition_variable": "cpp",
+        "cwctype": "cpp",
         "deque": "cpp",
-        "filesystem": "cpp",
-        "format": "cpp",
-        "forward_list": "cpp",
-        "fstream": "cpp",
+        "algorithm": "cpp",
         "functional": "cpp",
-        "future": "cpp",
-        "iomanip": "cpp",
-        "ios": "cpp",
-        "iostream": "cpp",
-        "istream": "cpp",
-        "iterator": "cpp",
-        "locale": "cpp",
-        "map": "cpp",
-        "mutex": "cpp",
-        "numeric": "cpp",
+        "memory_resource": "cpp",
         "optional": "cpp",
-        "ostream": "cpp",
-        "queue": "cpp",
-        "ratio": "cpp",
-        "set": "cpp",
-        "span": "cpp",
-        "sstream": "cpp",
-        "stdexcept": "cpp",
-        "stdfloat": "cpp",
-        "stop_token": "cpp",
-        "streambuf": "cpp",
-        "system_error": "cpp",
-        "thread": "cpp",
-        "unordered_set": "cpp",
-        "variant": "cpp",
-        "xfacet": "cpp",
-        "xiosbase": "cpp",
-        "xlocale": "cpp",
-        "xlocbuf": "cpp",
-        "xlocinfo": "cpp",
-        "xlocmes": "cpp",
-        "xlocmon": "cpp",
-        "xlocnum": "cpp",
-        "xloctime": "cpp",
-        "xtree": "cpp",
-        "qstring": "cpp",
-        "qmainwindow": "cpp",
         "random": "cpp",
-        "coroutine": "cpp",
-        "resumable": "cpp",
-        "execution": "cpp"
+        "ratio": "cpp",
+        "string_view": "cpp",
+        "format": "cpp",
+        "mutex": "cpp",
+        "numbers": "cpp",
+        "queue": "cpp",
+        "ranges": "cpp",
+        "semaphore": "cpp",
+        "span": "cpp",
+        "stop_token": "cpp",
+        "text_encoding": "cpp",
+        "thread": "cpp",
+        "variant": "cpp",
+        "cstdarg": "cpp",
+        "map": "cpp",
+        "set": "cpp",
+        "future": "cpp",
+        "stdfloat": "cpp",
+        "qapplication": "cpp"
     },
+    "C_Cpp.default.compilerPath": "C:/Programs_Others/msys64/ucrt64/bin/gcc.exe",
 
-    // ------------------------------------------------------------------------
-    // VS Code C/C++ Extension Settings (C_Cpp.*)
-    // ------------------------------------------------------------------------
-
-    // This is a critical setting for a smooth IntelliSense experience.
-    // It tells the C/C++ extension to get all its configuration info (like include paths and compiler definitions)
-    // directly from the CMake Tools extension. This ensures that your editor's knowledge of the code
-    // is perfectly in sync with your actual build configuration.
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+    "cmake.configureArgs": [
+    "-DCMAKE_PREFIX_PATH=C:/Programs_Others/Qt/6.10.0/mingw_64",
+    ]
 }

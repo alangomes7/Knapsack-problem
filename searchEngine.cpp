@@ -21,7 +21,7 @@ void SearchEngine::localSearch(
     const SearchEngine::MovementType& moveType,
     Algorithm::LOCAL_SEARCH localSearchMethod,
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
-    int maxIterationsWithoutImprovement, int maxIterations, const std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double, std::nano>>& deadline)
+    int maxIterationsWithoutImprovement, int maxIterations, const std::chrono::time_point<std::chrono::steady_clock>& deadline)
 {
     int iterationsWithoutImprovement = 0;
     currentBag.setLocalSearch(localSearchMethod);
@@ -36,7 +36,7 @@ void SearchEngine::localSearch(
     packagesOutsideBag.reserve(allPackages.size());
 
     while (iterationsWithoutImprovement < maxIterationsWithoutImprovement &&
-           std::chrono::high_resolution_clock::now() < deadline) {
+           std::chrono::steady_clock::now() < deadline) {
         bool improvementFound = false;
         const int benefitBefore = currentBag.getBenefit();
 

@@ -37,7 +37,7 @@ public:
                      const SearchEngine::MovementType& moveType,
                      Algorithm::LOCAL_SEARCH localSearchMethod,
                      const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
-                     int maxIterationsWithoutImprovement, int maxIterations, const std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double, std::nano>>& deadline);
+                     int maxIterationsWithoutImprovement, int maxIterations, const std::chrono::time_point<std::chrono::steady_clock>& deadline);
     int getSeed() const;
     std::mt19937& getRandomGenerator();
 

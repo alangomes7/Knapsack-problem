@@ -62,8 +62,8 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,
     resultBag.insert(resultBag.end(), greedyBags.begin(), greedyBags.end());
     resultBag.insert(resultBag.end(), randomGreedyBags.begin(), randomGreedyBags.end());
 
-    FileProcessor* fileProcessor = new FileProcessor(std::filesystem::current_path().string());
-    fileProcessor->saveData(resultBag);
+    std::string saveFolder = FileProcessor::createUniqueOutputDir(std::filesystem::current_path().string());
+    FileProcessor::saveData(resultBag, saveFolder, "");
 
     // === Select best initial bag ===
     Bag* bestInitialBag = nullptr;

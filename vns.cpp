@@ -41,7 +41,8 @@ Bag* VNS::run(int bagSize, const Bag* initialBag,
     bestBag->setMetaheuristicParameters("k_max=" + std::to_string(k_max));
 
     auto start_time = std::chrono::steady_clock::now();
-    auto deadline = start_time + std::chrono::duration<double>(m_maxTime);
+    auto deadline = start_time + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+        std::chrono::duration<double>(m_maxTime));
 
     // === Variable Neighborhood Search Main Loop ===
     while (k < k_max) {
