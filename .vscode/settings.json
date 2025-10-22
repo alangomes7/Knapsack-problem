@@ -1,0 +1,29 @@
+{
+    "cmake.generator": "MinGW Makefiles",
+    "cmake.configureSettings": {
+        "CMAKE_PREFIX_PATH": "C:/Programs_Others/Qt/6.10.0/mingw_64",
+        "CMAKE_C_COMPILER": "C:/Programs_Others/Qt/Tools/mingw1310_64/bin/gcc.exe",
+        "CMAKE_CXX_COMPILER": "C:/Programs_Others/Qt/Tools/mingw1310_64/bin/g++.exe",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INSTALL_PREFIX": "${workspaceFolder}/build/install"
+    },
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.configureOnOpen": true,
+    "cmake.buildToolArgs": [],
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "files.associations": {
+        "*.ui": "xml",
+        "*.h": "cpp",
+        "*.qrc": "xml",
+        "*.ts": "xml"
+    },
+    "C_Cpp.default.compilerPath": "C:/Programs_Others/Qt/Tools/mingw1310_64/bin/g++.exe",
+    "C_Cpp.default.intelliSenseMode": "gcc-x64",
+    "cmake.preferredGenerators": [
+        "MinGW Makefiles"
+    ],
+    "cmake.environment": {
+        "PATH": "C:/Programs_Others/Qt/Tools/mingw1310_64/bin;${env:PATH}"
+    }
+}
