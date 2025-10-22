@@ -1,21 +1,25 @@
+// .vscode/launch.json
 {
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch KnapsackProblem (Qt MinGW Debug)",
+            "name": "(gdb) Launch KnapsackProblem",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/install/bin/KnapsackProblem.exe",
+            // Correct path for a single-config build
+            "program": "${workspaceFolder}/build/KnapsackProblem.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/build/install",
+            // CWD must also point to the build directory
+            "cwd": "${workspaceFolder}/build",
             "environment": [
                 {
+                    // This is correct: adds Qt's bin directory to the PATH for running
                     "name": "PATH",
-                    "value": "${workspaceFolder}/build/install;C:/Programs_Others/Qt/6.10.0/mingw_64/bin;C:/Programs_Others/Qt/Tools/mingw1310_64/bin;${env:PATH}"
+                    "value": "C:/Programs_Others/Qt/6.10.0/mingw_64/bin;${env:PATH}"
                 }
             ],
-            "externalConsole": true,
+            "externalConsole": false,
             "MIMode": "gdb",
             "miDebuggerPath": "C:/Programs_Others/Qt/Tools/mingw1310_64/bin/gdb.exe",
             "setupCommands": [
@@ -24,7 +28,9 @@
                     "text": "-enable-pretty-printing",
                     "ignoreFailures": true
                 }
-            ]
+            ],
+            // Use the default CMake Tools build task
+            "preLaunchTask": "CMake: build"
         }
     ]
 }

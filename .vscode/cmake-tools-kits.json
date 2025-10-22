@@ -1,0 +1,15 @@
+[
+  {
+    "name": "GCC for Qt 6.10.0 (MinGW)",
+    "compilers": {
+      "C": "C:/Programs_Others/Qt/Tools/mingw1310_64/bin/gcc.exe",
+      "CXX": "C:/Programs_Others/Qt/Tools/mingw1310_64/bin/g++.exe"
+    },
+    "environmentVariables": {
+      "CMAKE_PREFIX_PATH": "C:/Programs_Others/Qt/6.10.0/mingw_64"
+    },
+    "cmakeSettings": {
+      "CMAKE_BUILD_TYPE": "Debug"
+    }
+  }
+]

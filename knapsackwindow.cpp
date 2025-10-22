@@ -26,9 +26,7 @@ void knapsackWindow::on_pushButton_problem_clicked()
     );
 
     if (!filePath.isEmpty()) {
-        // User selected a file, now you can use 'filePath'
-        // For example, display it in a QLabel:
-        // ui->label->setText(filePath);
+        ui->plainTextEdit_problem->setPlainText("Isso é um teste");
     }
 }
 

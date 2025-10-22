@@ -1,74 +1,83 @@
-cmake_minimum_required(VERSION 3.16)
+# Set the minimum required CMake version. Qt 6.7+ often requires 3.25 or newer.
+cmake_minimum_required(VERSION 3.25)
 
 project(KnapsackProblem VERSION 0.1 LANGUAGES CXX)
 
+# Enable Qt's automatic tools
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
+# Set the C++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets LinguistTools)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
+# Find Qt 6.10.0 specifically
+find_package(Qt6 6.10.0 REQUIRED COMPONENTS Widgets LinguistTools)
 
-set(TS_FILES KnapsackProblem_en_US.ts)
+# --- Define Project Files ---
 
-set(PROJECT_SOURCES
-        main.cpp
-        knapsackwindow.cpp
-        knapsackwindow.h
-        knapsackwindow.ui
-        ${TS_FILES}
+set(TS_FILES
+    KnapsackProblem_en_US.ts
 )
 
-if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(KnapsackProblem
-        MANUAL_FINALIZATION
-        ${PROJECT_SOURCES}
-        fileprocessor.cpp fileprocessor.h
-        DataStructures.h
-        package.cpp package.h
-        dependency.cpp dependency.h
-        bag.cpp bag.h
-    )
-# Define target properties for Android with Qt 6 as:
-#    set_property(TARGET KnapsackProblem APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
-#                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
-# For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
+# Generate translation (.qm) files from the .ts files
+qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 
-    qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
-else()
-    if(ANDROID)
-        add_library(KnapsackProblem SHARED
-            ${PROJECT_SOURCES}
-        )
-# Define properties for Android with Qt 5 after find_package() calls as:
-#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-    else()
-        add_executable(KnapsackProblem
-            ${PROJECT_SOURCES}
-        )
-    endif()
+set(PROJECT_SOURCES
+    main.cpp
+    knapsackwindow.cpp
+    fileprocessor.cpp
+    package.cpp
+    dependency.cpp
+    bag.cpp
+)
 
-    qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
-endif()
+set(PROJECT_HEADERS
+    knapsackwindow.h
+    fileprocessor.h
+    DataStructures.h
+    package.h
+    dependency.h
+    bag.h
+)
 
-target_link_libraries(KnapsackProblem PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+set(PROJECT_UIS
+    knapsackwindow.ui
+)
 
-# Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
-# If you are developing for iOS or macOS you should consider setting an
-# explicit, fixed bundle identifier manually though.
-if(${QT_VERSION} VERSION_LESS 6.1.0)
-  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.KnapsackProblem)
-endif()
+# --- Create Executable ---
+
+# Create the executable using all defined sources, headers, UIs, and translations
+qt_add_executable(KnapsackProblem
+    MANUAL_FINALIZATION
+    ${PROJECT_SOURCES}
+    ${PROJECT_HEADERS}
+    ${PROJECT_UIS}
+    ${TS_FILES} # Include .ts files in the project
+)
+
+# --- Link Libraries ---
+
+# Link the required Qt modules. Qt6::Widgets automatically links Core and Gui.
+target_link_libraries(KnapsackProblem PRIVATE
+    Qt6::Widgets
+)
+
+# --- Set Target Properties ---
+
+# Set properties for macOS and Windows bundles
 set_target_properties(KnapsackProblem PROPERTIES
-    ${BUNDLE_ID_OPTION}
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
+
+# Set a local install path inside the build folder
+set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install")
+
+# --- Install Target ---
 
 include(GNUInstallDirs)
 install(TARGETS KnapsackProblem
@@ -77,6 +86,5 @@ install(TARGETS KnapsackProblem
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(KnapsackProblem)
-endif()
+# Finalize the executable (e.g., handles deployment of dependencies)
+qt_finalize_executable(KnapsackProblem)
