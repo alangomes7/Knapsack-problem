@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 
 #include "DataStructures.h"
 
@@ -37,7 +38,7 @@ ProblemInstance loadProblem(const std::string& filename);
  * @param outputDir The directory to save the file in.
  * @param inputFilename The name of the original problem file (for logging).
  */
-void saveData(const std::vector<Bag*>& bags,
+void saveData(const std::vector<std::unique_ptr<Bag>>& bags,
               const std::string& outputDir,
               const std::string& inputFilename);
 

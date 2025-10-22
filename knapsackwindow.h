@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+#include "DataStructures.h"
+
 namespace Ui {
 class knapsackWindow;
 }
@@ -18,8 +20,12 @@ public:
 private slots:
     void on_pushButton_problem_clicked();
 
+    void on_pushButton_findBag_clicked();
+
 private:
+    void initializeUi();
     Ui::knapsackWindow *ui;
+    ProblemInstance m_problemInstance;
 };
 
 #endif // KNAPSACKWINDOW_H

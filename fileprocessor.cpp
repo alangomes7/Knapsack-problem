@@ -112,30 +112,42 @@ ProblemInstance loadProblem(const std::string& filename) {
     return problemInstance;
 }
 
-void saveData(const std::vector<Bag*>& bags,
+void saveData(const std::vector<std::unique_ptr<Bag>>& bags,
               const std::string& outputDir,
               const std::string& inputFilename)
 {
     if (bags.empty() || outputDir.empty()) return;
 
     const std::string csvFile = outputDir + "/summary_results.csv";
+
+    bool writeHeader = false;
+    {
+        std::ifstream inFile(csvFile);
+        if (!inFile.is_open() || inFile.peek() == std::ifstream::traits_type::eof())
+        {
+            writeHeader = true;
+        }
+    }
+
     std::ofstream outFile(csvFile, std::ios::app);
     if (!outFile.is_open()) {
         std::cerr << "Error: Could not create or open " << csvFile << std::endl;
         return;
     }
 
-    if (outFile.tellp() == 0) {
+    if (writeHeader) {
         outFile << "Algorithm,Movement,File name,Timestamp,Processing Time (s),"
                    "Packages,Dependencies,Bag Weight,Bag Benefit\n";
     }
 
-    for (const Bag* bag : bags) {
+
+    Algorithm algHelper(0, 0);
+
+    for (const std::unique_ptr<Bag>& bag : bags) {
         if (!bag) continue;
 
-        // Algorithm algHelper(0,0);
-        std::string algStr = "algHelper.toString(bag->getBagAlgorithm())";
-        std::string locStr = "algHelper.toString(bag->getBagLocalSearch())";
+        std::string algStr = algHelper.toString(bag->getBagAlgorithm());
+        std::string locStr = algHelper.toString(bag->getBagLocalSearch());
         if (locStr != "None") algStr += " | " + locStr;
 
         outFile << algStr << ","

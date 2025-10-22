@@ -6,8 +6,9 @@
 #include <unordered_map>
 #include <functional>
 #include <random>
+#include <memory>
 
-#include "metaheuristicHelper.h"
+#include "DataStructures.h"
 
 class Bag;
 class Package;
@@ -46,12 +47,7 @@ public:
 
     explicit Algorithm(double maxTime, unsigned int seed);
 
-    std::vector<Bag*> run(const std::string& inputFile, const std::string& timestamp);
-
-    std::vector<Bag*> run(Algorithm::ALGORITHM_TYPE algorithm, int bagSize,
-                          const std::vector<Package*>& packages,
-                          const std::vector<Dependency*>& dependencies,
-                          const std::string& timestamp);
+    std::vector<std::unique_ptr<Bag>> run(const ProblemInstance& problemInstance, const std::string& timestamp);
 
     std::string toString(Algorithm::ALGORITHM_TYPE algorithm) const;
     std::string toString(Algorithm::LOCAL_SEARCH localSearch) const;
@@ -61,12 +57,10 @@ private:
     void precomputeDependencyGraph(const std::vector<Package*>& packages,
                                    const std::vector<Dependency*>& dependencies);
 
-    const std::string m_inputFile;
     std::string m_timestamp;
     std::unordered_map<const Package*, std::vector<const Dependency*>> m_dependencyGraph;
     const double m_maxTime;
     std::mt19937 m_generator;
-    MetaheuristicHelper m_metaheuristicHelper;
 };
 
 #endif // ALGORITHM_H

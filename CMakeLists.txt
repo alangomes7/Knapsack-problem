@@ -31,6 +31,10 @@ set(PROJECT_SOURCES
     package.cpp
     dependency.cpp
     bag.cpp
+    algorithm.cpp
+    solution_repair.cpp
+    random_provider.cpp
+    constructive_solutions.cpp
 )
 
 set(PROJECT_HEADERS
@@ -40,6 +44,10 @@ set(PROJECT_HEADERS
     package.h
     dependency.h
     bag.h
+    algorithm.h
+    solution_repair.h
+    random_provider.h
+    constructive_solutions.h
 )
 
 set(PROJECT_UIS

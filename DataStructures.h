@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <sstream>  // Added for std::ostringstream
+#include <iomanip>  // Added for std::boolalpha
 
 // Forward declarations for pointer-based struct
 class Package;
@@ -20,6 +22,19 @@ struct ProblemInstance {
     int maxCapacity = 0;
     std::vector<Package*> packages;
     std::vector<Dependency*> dependencies;
+
+    /**
+     * @brief Generates a string representation of the problem instance.
+     * @return A formatted string summarizing the struct's fields.
+     */
+    [[nodiscard]] std::string toString() const {
+        std::ostringstream oss;
+        oss << "Problem Instance:\n"
+            << "↳ max capacity:         " << maxCapacity << " MB\n"
+            << "↳ packages (count):     " << packages.size() << "\n"
+            << "↳ dependencies (count): " << dependencies.size() << "\n";
+        return oss.str();
+    }
 };
 
 /**
@@ -31,6 +46,22 @@ struct SolutionReport {
     long reportedWeight = 0;
     std::vector<int> packageVector;
     std::vector<int> dependencyVector;
+
+    /**
+     * @brief Generates a string representation of the solution report.
+     * @return A formatted string summarizing the struct's fields.
+     */
+    [[nodiscard]] std::string toString() const {
+        std::ostringstream oss;
+        oss << "SolutionReport {\n"
+            << "  reportedBenefit: " << reportedBenefit << "\n"
+            << "  reportedWeight: " << reportedWeight << "\n"
+            << "  packageVector (count): " << packageVector.size() << "\n"
+            << "  dependencyVector (count): " << dependencyVector.size() << "\n"
+            << "}";
+        // Note: Not printing full vector contents to avoid large output.
+        return oss.str();
+    }
 };
 
 /**
@@ -57,6 +88,35 @@ struct ValidationResult {
      */
     [[nodiscard]] bool isOverallValid() const {
         return isConsistent && isFeasible;
+    }
+
+    /**
+     * @brief Generates a string representation of the validation results.
+     * @return A formatted string summarizing the struct's fields.
+     */
+    [[nodiscard]] std::string toString() const {
+        std::ostringstream oss;
+        oss << std::boolalpha; // Print 'true'/'false'
+        oss << "ValidationResult {\n"
+            << "  Overall Valid: " << isOverallValid() << "\n"
+            << "  --------------------\n"
+            << "  Flags:\n"
+            << "    isConsistent: " << isConsistent << "\n"
+            << "    isFeasible: " << isFeasible << "\n"
+            << "    isBenefitValid: " << isBenefitValid << "\n"
+            << "    isReportedWeightValid: " << isReportedWeightValid << "\n"
+            << "  --------------------\n"
+            << "  Calculated Values:\n"
+            << "    calculatedBenefit: " << calculatedBenefit << "\n"
+            << "    trueWeight: " << trueWeight << "\n"
+            << "    packageCount: " << packageCount << "\n"
+            << "    trueRequiredDependencyCount: " << trueRequiredDependencyCount << "\n"
+            << "  --------------------\n"
+            << "  Reported/Internal Values:\n"
+            << "    calculatedReportWeight: " << calculatedReportWeight << "\n"
+            << "    reportedDependencyCount: " << reportedDependencyCount << "\n"
+            << "}";
+        return oss.str();
     }
 };
 

@@ -37,17 +37,135 @@
      </rect>
     </property>
     <property name="text">
-     <string>PushButton</string>
+     <string>select a instance</string>
     </property>
    </widget>
    <widget class="QPlainTextEdit" name="plainTextEdit_problem">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>60</y>
-      <width>321</width>
-      <height>481</height>
+      <y>80</y>
+      <width>191</width>
+      <height>81</height>
      </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_problemInstamce">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>60</y>
+      <width>121</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Problem Instance</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_findBag">
+    <property name="geometry">
+     <rect>
+      <x>680</x>
+      <y>20</y>
+      <width>83</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>find bag</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_maxExecutionTime">
+    <property name="geometry">
+     <rect>
+      <x>230</x>
+      <y>60</y>
+      <width>171</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Max Execution Time (sec)</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_algorithmSeed">
+    <property name="geometry">
+     <rect>
+      <x>420</x>
+      <y>60</y>
+      <width>111</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Algorithm Seed</string>
+    </property>
+   </widget>
+   <widget class="QTimeEdit" name="timeEdit_maxExecutionTime">
+    <property name="geometry">
+     <rect>
+      <x>270</x>
+      <y>80</y>
+      <width>101</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="maximumTime">
+     <time>
+      <hour>1</hour>
+      <minute>0</minute>
+      <second>0</second>
+     </time>
+    </property>
+    <property name="displayFormat">
+     <string>mm:ss</string>
+    </property>
+    <property name="time">
+     <time>
+      <hour>0</hour>
+      <minute>1</minute>
+      <second>30</second>
+     </time>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spinBox_algorithmSeed">
+    <property name="geometry">
+     <rect>
+      <x>420</x>
+      <y>80</y>
+      <width>101</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>75</number>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_executionTimes">
+    <property name="geometry">
+     <rect>
+      <x>590</x>
+      <y>60</y>
+      <width>111</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Execution Times</string>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spinBox_executionTimes">
+    <property name="geometry">
+     <rect>
+      <x>590</x>
+      <y>80</y>
+      <width>101</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="value">
+     <number>4</number>
     </property>
    </widget>
   </widget>

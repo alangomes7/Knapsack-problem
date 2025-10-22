@@ -5,101 +5,94 @@
 #include <algorithm>
 #include <iterator>
 #include <limits>
+#include <filesystem>
 
 #include "bag.h"
 #include "package.h"
 #include "dependency.h"
-#include "SearchStrategies.h"
-#include "searchEngine.h"
-#include "MetaheuristicHelper.h"
-#include "vnd.h"
-#include "vns.h"
-#include "grasp.h"
-#include "fileprocessor.h"
-#include <filesystem>
+#include "constructive_solutions.h" 
+#include "SearchEngine.h"
+#include "solution_repair.h"
 
-Algorithm::Algorithm(double maxTime)
-    : m_maxTime(maxTime), m_metaheuristicHelper()
-{
-}
-
+// Replaced non-breaking spaces with regular spaces
 Algorithm::Algorithm(double maxTime, unsigned int seed)
-    : m_maxTime(maxTime), m_generator(seed), m_metaheuristicHelper(seed)
+    : m_maxTime(maxTime), m_generator(seed)
 {
 }
 
 // =============================================================
 // == Main Control: Executes all strategies (construct + improve)
 // =============================================================
-std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,
-                                 int bagSize,
-                                 const std::vector<Package*>& packages,
-                                 const std::vector<Dependency*>& dependencies,
-                                 const std::string& timestamp)
+
+std::vector<std::unique_ptr<Bag>> Algorithm::run(const ProblemInstance& problemInstance, const std::string& timestamp)
 {
     m_timestamp = timestamp;
 
     // Precompute dependencies once
-    precomputeDependencyGraph(packages, dependencies);
+    precomputeDependencyGraph(problemInstance.packages, problemInstance.dependencies);
 
     // Create the strategy manager (constructive phase)
-    SearchStrategies strategies(
-        m_maxTime,
-        m_generator,              // share RNG
-        m_metaheuristicHelper,    // share helper
-        m_dependencyGraph,        // dependency map
-        m_timestamp
-    );
+    ConstructiveSolutions constructiveSolutions(m_maxTime, m_generator, m_dependencyGraph, m_timestamp);
 
-    std::vector<Bag*> resultBag;
+    // Vector now holds smart pointers
+    std::vector<std::unique_ptr<Bag>> resultBag;
     resultBag.reserve(10);
 
     // === Constructive Phase ===
-    resultBag.push_back(strategies.randomBag(bagSize, packages));
-    std::vector<Bag*> greedyBags = strategies.greedyBag(bagSize, packages);
-    std::vector<Bag*> randomGreedyBags = strategies.randomGreedy(bagSize, packages);
+    // Use problemInstance members and std::move the resulting unique_ptr
+    resultBag.push_back(constructiveSolutions.randomBag(problemInstance.maxCapacity, problemInstance.packages));
+    
+    // greedyBags and randomGreedyBags are now vectors of unique_ptr
+    std::vector<std::unique_ptr<Bag>> greedyBags = constructiveSolutions.greedyBag(problemInstance.maxCapacity, problemInstance.packages);
+    std::vector<std::unique_ptr<Bag>> randomGreedyBags = constructiveSolutions.randomGreedy(problemInstance.maxCapacity, problemInstance.packages);
 
-    resultBag.insert(resultBag.end(), greedyBags.begin(), greedyBags.end());
-    resultBag.insert(resultBag.end(), randomGreedyBags.begin(), randomGreedyBags.end());
-
-    std::string saveFolder = FileProcessor::createUniqueOutputDir(std::filesystem::current_path().string());
-    FileProcessor::saveData(resultBag, saveFolder, "");
+    // We must std::move unique_ptr elements from one vector to another
+    resultBag.insert(resultBag.end(),
+                     std::make_move_iterator(greedyBags.begin()),
+                     std::make_move_iterator(greedyBags.end()));
+    resultBag.insert(resultBag.end(),
+                     std::make_move_iterator(randomGreedyBags.begin()),
+                     std::make_move_iterator(randomGreedyBags.end()));
 
     // === Select best initial bag ===
+    // Use a non-owning raw pointer for observation
     Bag* bestInitialBag = nullptr;
     int bestInitialBenefit = -1;
-    for (Bag* bag : resultBag) {
+    // Iterate over the vector of unique_ptrs
+    for (const auto& bag : resultBag) {
         if (bag->getBenefit() > bestInitialBenefit) {
             bestInitialBenefit = bag->getBenefit();
-            bestInitialBag = bag;
+            bestInitialBag = bag.get(); // Get the raw pointer
         }
     }
 
     // === Improvement Phase (Metaheuristics) ===
-    if (bestInitialBag) {
-        // VND
-        VND vnd(m_maxTime, m_generator());
-        Bag* vndBag = vnd.run(bagSize, bestInitialBag, packages, m_dependencyGraph);
-        vndBag->setTimestamp(m_timestamp);
-        fileProcessor->saveData({ vndBag });
+    // if (bestInitialBag) {
+    //     // VND
+    //     VND vnd(m_maxTime, m_generator());
+    //     // Note: VND::run would also need to be updated to return std::unique_ptr
+    //     std::unique_ptr<Bag> vndBag = vnd.run(problemInstance.bagSize, bestInitialBag, problemInstance.packages, m_dependencyGraph);
+    //     vndBag->setTimestamp(m_timestamp);
+    //     // fileProcessor->saveData({ vndBag.get() }); // Assuming saveData wants raw pointers
 
-        
-        // VNS
-        VNS vns(m_maxTime, m_generator());
-        Bag* vnsBag = vns.run(bagSize, bestInitialBag, packages, m_dependencyGraph);
-        fileProcessor->saveData({ vnsBag });
+    //     // VNS
+    //     VNS vns(m_maxTime, m_generator());
+    //     std::unique_ptr<Bag> vnsBag = vns.run(problemInstance.bagSize, bestInitialBag, problemInstance.packages, m_dependencyGraph);
+    //     // fileProcessor->saveData({ vnsBag.get() });
 
-        // GRASP
-        GRASP grasp(m_maxTime, m_generator());
-        Bag* graspBag = grasp.run(bagSize, resultBag, packages, SearchEngine::MovementType::EJECTION_CHAIN,
-                                    Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
-        graspBag->setTimestamp(m_timestamp);
-        fileProcessor->saveData({ graspBag });
-        
-        resultBag.push_back(vndBag);
-        resultBag.push_back(vnsBag);
-        resultBag.push_back(graspBag);
-    }
+    //     // GRASP
+    //     GRASP grasp(m_maxTime, m_generator());
+    //     // This would need a more complex update, as it takes a vector of Bags
+    //     // You might need to pass a vector of raw pointers instead
+    //     // Bag* graspBag = grasp.run(problemInstance.bagSize, /*...raw pointer vector...*/, problemInstance.packages, SearchEngine::MovementType::EJECTION_CHAIN,
+    //     //                          Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, m_dependencyGraph);
+    //     // graspBag->setTimestamp(m_timestamp);
+    //     // fileProcessor->saveData({ graspBag });
+    //     
+    //     resultBag.push_back(std::move(vndBag));
+    //     resultBag.push_back(std::move(vnsBag));
+    //     // resultBag.push_back(std::move(graspBag)); // if grasp returns unique_ptr
+    // }
 
     return resultBag;
 }
@@ -109,6 +102,7 @@ std::vector<Bag*> Algorithm::run(Algorithm::ALGORITHM_TYPE algorithm,
 // =============================================================
 
 std::string Algorithm::toString(Algorithm::ALGORITHM_TYPE algorithm) const {
+    // Replaced non-breaking spaces with regular spaces
     switch (algorithm) {
         case Algorithm::ALGORITHM_TYPE::RANDOM: return "RANDOM";
         case Algorithm::ALGORITHM_TYPE::GREEDY_Package_Benefit: return "GREEDY -> Package: Benefit";
@@ -125,6 +119,7 @@ std::string Algorithm::toString(Algorithm::ALGORITHM_TYPE algorithm) const {
 }
 
 std::string Algorithm::toString(Algorithm::LOCAL_SEARCH localSearch) const {
+    // Replaced non-breaking spaces with regular spaces
     switch (localSearch) {
         case Algorithm::LOCAL_SEARCH::FIRST_IMPROVEMENT: return "First Improvement";
         case Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT: return "Best Improvement";
@@ -139,6 +134,7 @@ std::string Algorithm::toString(Algorithm::LOCAL_SEARCH localSearch) const {
 void Algorithm::precomputeDependencyGraph(const std::vector<Package*>& packages,
                                           const std::vector<Dependency*>& dependencies)
 {
+    // Replaced non-breaking spaces with regular spaces
     m_dependencyGraph.clear();
     m_dependencyGraph.reserve(packages.size());
 
