@@ -29,7 +29,6 @@ Algorithm::Algorithm(double maxTime, unsigned int seed, const std::string &outpu
 // =============================================================
 // == Main Control: Executes all strategies (construct + improve)
 // =============================================================
-
 std::vector<std::unique_ptr<Bag>> Algorithm::run(const ProblemInstance& problemInstance, const std::string& timestamp)
 {
     m_timestamp = timestamp;
@@ -40,200 +39,114 @@ std::vector<std::unique_ptr<Bag>> Algorithm::run(const ProblemInstance& problemI
     std::vector<std::unique_ptr<Bag>> resultBag;
     resultBag.reserve(19);
 
-    std::shared_ptr<Bag> bestInitialBag; // always valid
+    std::mutex bagMutex;
+    std::shared_ptr<Bag> bestInitialBag;
     int bestBenefit = std::numeric_limits<int>::min();
 
-    std::mutex bagMutex; // protects saveBag() and resultBag.push_back()
-
     auto updateBestBag = [&](const std::unique_ptr<Bag>& bag) {
-        if (bag && bag->getBenefit() > bestBenefit) {
+        if (!bag) return;
+        std::lock_guard<std::mutex> lock(bagMutex);
+        if (bag->getBenefit() > bestBenefit) {
             bestBenefit = bag->getBenefit();
-            bestInitialBag = std::make_shared<Bag>(*bag); // copy
+            bestInitialBag = std::make_shared<Bag>(*bag);
         }
     };
 
+    // Saves a vector of bags
+    auto saveBags = [&](std::vector<std::unique_ptr<Bag>>& bags) {
+        if (bags.empty()) return;
+        FileProcessor::saveData(bags, m_outputDir, m_inputFile, m_fileId);
+    };
+
     auto saveBag = [&](const std::unique_ptr<Bag>& bag) {
+        if (!bag) return;
         std::vector<std::unique_ptr<Bag>> tempVec;
         tempVec.push_back(std::make_unique<Bag>(*bag));
-        FileProcessor::saveData(tempVec, m_outputDir, m_inputFile, m_fileId);
+        saveBags(tempVec);
     };
 
     // === Constructive Phase ===
     {
-        auto bag = constructiveSolutions.randomBag(problemInstance.maxCapacity, problemInstance.packages);
-        updateBestBag(bag);
-        saveBag(bag);
-        resultBag.push_back(std::move(bag));
+        resultBag.push_back(constructiveSolutions.randomBag(problemInstance.maxCapacity, problemInstance.packages));
 
-        auto greedyBags = constructiveSolutions.greedyBag(problemInstance.maxCapacity, problemInstance.packages);
-        for (auto& bag : greedyBags) {
-            updateBestBag(bag);
-            saveBag(bag);
+        for (auto& bag : constructiveSolutions.greedyBag(problemInstance.maxCapacity, problemInstance.packages))
             resultBag.push_back(std::move(bag));
-        }
 
-        auto randomGreedyBags = constructiveSolutions.randomGreedy(problemInstance.maxCapacity, problemInstance.packages);
-        for (auto& bag : randomGreedyBags) {
-            updateBestBag(bag);
-            saveBag(bag);
+        for (auto& bag : constructiveSolutions.randomGreedy(problemInstance.maxCapacity, problemInstance.packages))
             resultBag.push_back(std::move(bag));
-        }
+
+        for (auto& bag : resultBag) updateBestBag(bag);
+        saveBags(resultBag);
     }
 
     // === Improvement Phase ===
+    if (!bestInitialBag && !resultBag.empty())
+        bestInitialBag = std::make_shared<Bag>(*resultBag.front());
+
+    std::vector<SearchEngine::MovementType> moves = {
+        SearchEngine::MovementType::ADD,
+        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1,
+        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_2,
+        SearchEngine::MovementType::SWAP_REMOVE_2_ADD_1,
+        SearchEngine::MovementType::EJECTION_CHAIN
+    };
+    int maxGraspIterations = 100;
+
+    // --- STEP 1: VND + VNS (parallel threads) ---
     {
-        // ----------------------
-        // Shared resources
-        // ----------------------
-        std::mutex bagMutex; // protects bestInitialBag, bestBenefit, resultBag
-        std::shared_ptr<Bag> bestInitialBag; // always valid
-        int bestBenefit = std::numeric_limits<int>::min();
+        auto runMeta = [&](auto& meta) {
+            std::mt19937 rng(m_generator());
+            auto bag = meta.run(problemInstance.maxCapacity, bestInitialBag.get(),
+                                problemInstance.packages, m_dependencyGraph);
+            bag->setTimestamp(m_timestamp);
+            updateBestBag(bag);
+            saveBag(bag);
 
-        // ----------------------
-        // Save function
-        // ----------------------
-        auto saveBag = [&](const std::unique_ptr<Bag>& bag) {
-            std::vector<std::unique_ptr<Bag>> tempVec;
-            tempVec.push_back(std::make_unique<Bag>(*bag));
-            FileProcessor::saveData(tempVec, m_outputDir, m_inputFile, m_fileId);
-        };
-
-        // ----------------------
-        // Ensure bestInitialBag is valid
-        // ----------------------
-        if (!bestInitialBag && !resultBag.empty()) {
-            bestInitialBag = std::make_shared<Bag>(*resultBag.front());
-        }
-
-        // ----------------------
-        // Update best bag safely
-        // ----------------------
-        auto updateBestBag = [&](const std::unique_ptr<Bag>& bag) {
-            if (!bag) return;
             std::lock_guard<std::mutex> lock(bagMutex);
-            if (bag->getBenefit() > bestBenefit) {
-                bestBenefit = bag->getBenefit();
-                bestInitialBag = std::make_shared<Bag>(*bag);
-            }
+            resultBag.push_back(std::move(bag));
         };
 
-        // ----------------------
-        // Movements and iterations
-        // ----------------------
-        std::vector<SearchEngine::MovementType> moves = {
-            SearchEngine::MovementType::ADD,
-            SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1,
-            SearchEngine::MovementType::SWAP_REMOVE_1_ADD_2,
-            SearchEngine::MovementType::SWAP_REMOVE_2_ADD_1,
-            SearchEngine::MovementType::EJECTION_CHAIN
-        };
-        int maxGraspIterations = 100;
+        std::thread vndThread([&]() { VND vnd(m_maxTime, m_generator()); runMeta(vnd); });
+        std::thread vnsThread([&]() { VNS vns(m_maxTime, m_generator()); runMeta(vns); });
 
-        // ----------------------
-        // VND (async task)
-        // ----------------------
-        auto vndFuture = std::async(std::launch::async, [&]() {
-            std::mt19937 rng(m_generator());
-            VND vnd(m_maxTime, rng());
+        vndThread.join();
+        vnsThread.join();
+    }
 
-            std::shared_ptr<Bag> inputBag;
-            {
-                std::lock_guard<std::mutex> lock(bagMutex);
-                inputBag = bestInitialBag; // copy shared_ptr safely
-            }
+    // --- STEP 2: GRASP and GRASP_VNS (parallel internally per movement) ---
+    {
+        auto runGrasp = [&]<typename Constructor>() {
+            std::vector<std::thread> threads;
+            std::vector<std::unique_ptr<Bag>> groupBags;
+            std::mutex groupMutex;
 
-            auto vndBag = vnd.run(problemInstance.maxCapacity, inputBag.get(),
-                                problemInstance.packages, m_dependencyGraph);
-            vndBag->setTimestamp(m_timestamp);
+            for (auto move : moves) {
+                threads.emplace_back([&, move]() {
+                    std::mt19937 rng(m_generator());
 
-            // Update shared resources
-            {
-                std::lock_guard<std::mutex> lock(bagMutex);
-                saveBag(vndBag);
-                resultBag.push_back(std::move(vndBag));
-                if (resultBag.back() && resultBag.back()->getBenefit() > bestBenefit) {
-                    bestBenefit = resultBag.back()->getBenefit();
-                    bestInitialBag = std::make_shared<Bag>(*resultBag.back());
-                }
-            }
-        });
+                    Constructor graspThread(m_maxTime, rng(), static_cast<int>(problemInstance.packages.size() / 3), -1);
 
-        // ----------------------
-        // Thread pool for VNS, GRASP, GRASP_VNS
-        // ----------------------
-        std::vector<std::thread> allThreads;
-
-        // VNS depends on VND
-        allThreads.emplace_back([&]() {
-            vndFuture.get(); // wait for VND
-
-            std::mt19937 rng(m_generator());
-            VNS vns(m_maxTime, rng());
-
-            std::shared_ptr<Bag> inputBag;
-            {
-                std::lock_guard<std::mutex> lock(bagMutex);
-                inputBag = bestInitialBag;
-            }
-
-            auto vnsBag = vns.run(problemInstance.maxCapacity, inputBag.get(),
-                                problemInstance.packages, m_dependencyGraph);
-            vnsBag->setTimestamp(m_timestamp);
-
-            {
-                std::lock_guard<std::mutex> lock(bagMutex);
-                saveBag(vnsBag);
-                resultBag.push_back(std::move(vnsBag));
-                if (resultBag.back() && resultBag.back()->getBenefit() > bestBenefit) {
-                    bestBenefit = resultBag.back()->getBenefit();
-                    bestInitialBag = std::make_shared<Bag>(*resultBag.back());
-                }
-            }
-        });
-
-        // GRASP (fully parallel)
-        for (auto move : moves) {
-            allThreads.emplace_back([&, move]() {
-                std::mt19937 rng(m_generator());
-                GRASP graspThread(m_maxTime, rng(), static_cast<int>(problemInstance.packages.size() / 3));
-
-                auto bag = graspThread.run(problemInstance.maxCapacity, problemInstance.packages,
-                                        move, m_dependencyGraph, 200, maxGraspIterations);
-                bag->setTimestamp(m_timestamp);
-
-                updateBestBag(bag); // thread-safe
-                {
-                    std::lock_guard<std::mutex> lock(bagMutex);
-                    saveBag(bag);
-                    resultBag.push_back(std::move(bag));
-                }
-            });
-        }
-
-        // GRASP_VNS (fully parallel)
-        for (auto move : moves) {
-            allThreads.emplace_back([&, move]() {
-                std::mt19937 rng(m_generator());
-                GRASP_VNS graspVnsThread(m_maxTime, rng(), static_cast<int>(problemInstance.packages.size() / 3), -1);
-
-                auto bag = graspVnsThread.run(problemInstance.maxCapacity, problemInstance.packages,
+                    auto bag = graspThread.run(problemInstance.maxCapacity, problemInstance.packages,
                                             move, m_dependencyGraph, 200, maxGraspIterations);
-                bag->setTimestamp(m_timestamp);
+                    bag->setTimestamp(m_timestamp);
 
-                updateBestBag(bag); // thread-safe
-                {
-                    std::lock_guard<std::mutex> lock(bagMutex);
+                    updateBestBag(bag); // thread-safe
                     saveBag(bag);
-                    resultBag.push_back(std::move(bag));
-                }
-            });
-        }
 
-        // ----------------------
-        // Wait for all threads
-        // ----------------------
-        for (auto& t : allThreads) t.join();
+                    std::lock_guard<std::mutex> lock(groupMutex);
+                    groupBags.push_back(std::move(bag));
+                });
+            }
 
+            for (auto& t : threads) t.join();
+
+            // Save and append results
+            std::lock_guard<std::mutex> lock(bagMutex);
+            for (auto& b : groupBags) resultBag.push_back(std::move(b));
+        };
+
+        runGrasp.template operator()<GRASP>();
+        runGrasp.template operator()<GRASP_VNS>();
     }
 
     return resultBag;

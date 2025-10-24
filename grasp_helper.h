@@ -3,46 +3,38 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <random>
 #include "bag.h"
 #include "package.h"
 #include "dependency.h"
 #include "search_engine.h"
 
-/**
- * @brief Provides common helper functions for GRASP-based algorithms.
- */
 namespace GraspHelper {
 
-    /**
-     * @brief Calculates the greedy score for a package.
-     * @param pkg The package to evaluate.
-     * @param bag The current bag (to check existing dependencies).
-     * @param dependencies The dependencies of the package.
-     * @return The greedy score.
-     */
     double calculateGreedyScore(
         const Package* pkg,
         const Bag& bag,
         const std::vector<const Dependency*>& dependencies);
 
     /**
-     * @brief Performs the fast, randomized greedy construction phase of GRASP.
+     * @brief Performs a fast, randomized GRASP construction phase.
      *
-     * @param bagSize Maximum bag capacity.
-     * @param allPackages List of all available packages.
-     * @param dependencyGraph Package dependency graph.
-     * @param searchEngine A thread-local search engine for its RNG.
-     * @param candidateScoresBuffer A thread-local buffer to reuse.
-     * @param rclBuffer A thread-local buffer to reuse.
-     * @param rclSize The size of the Restricted Candidate List.
-     * @param alpha The alpha parameter controlling RCL greediness.
-     * - $\alpha = 0$: Purely greedy (RCL = best candidate).
-     * - $\alpha = 1$: Purely random (RCL = all valid candidates).
-     * - $0 < \alpha < 1$: Semi-greedy (RCL = top candidates).
-     * - $\alpha < 0$: Use a new random alpha $\in [0, 1]$ for each iteration.
-     * @param alpha_random_out (Out) Reference to store the actual alpha value used
-     * in this construction (especially when $\alpha < 0$).
-     * @return A unique pointer to the newly constructed Bag.
+     * Optimizations:
+     * - Reuses buffers
+     * - Precomputes dependency vectors
+     * - Partial sort for small RCL
+     * - Minimized RNG calls
+     *
+     * @param bagSize Maximum bag capacity
+     * @param allPackages List of all packages
+     * @param dependencyGraph Map of package dependencies
+     * @param searchEngine Thread-local search engine for RNG
+     * @param candidateScoresBuffer Thread-local reusable buffer
+     * @param rclBuffer Thread-local reusable buffer
+     * @param rclSize RCL size
+     * @param alpha Alpha parameter
+     * @param alpha_random_out Actual alpha used (output)
+     * @return Constructed bag
      */
     std::unique_ptr<Bag> constructionPhaseFast(
         int bagSize,

@@ -1,27 +1,22 @@
 #include "vnd.h"
-
-#include <chrono>
-#include <limits>
-#include <algorithm>
-
 #include "bag.h"
 #include "package.h"
 #include "dependency.h"
-#include "algorithm.h"
 #include "solution_repair.h"
+#include <chrono>
+#include <algorithm>
 
 VND::VND(double maxTime, unsigned int seed)
     : m_maxTime(maxTime), m_searchEngine(seed) {}
 
 std::unique_ptr<Bag> VND::run(int bagSize, const Bag* initialBag,
-              const std::vector<Package*>& allPackages,
-              const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
+                              const std::vector<Package*>& allPackages,
+                              const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
 {
     if (!initialBag) {
         return std::make_unique<Bag>(Algorithm::ALGORITHM_TYPE::NONE, "0");
     }
 
-    // Neighborhood structures
     std::vector<SearchEngine::MovementType> movements = {
         SearchEngine::MovementType::ADD,
         SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1,
@@ -30,31 +25,26 @@ std::unique_ptr<Bag> VND::run(int bagSize, const Bag* initialBag,
         SearchEngine::MovementType::EJECTION_CHAIN
     };
 
+    const int k_max = static_cast<int>(movements.size());
     Algorithm::LOCAL_SEARCH searchMethod = Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT;
 
-    int k = 0;
-    const int k_max = static_cast<int>(movements.size());
-    
-    // Work on a local copy of the initial bag
-    std::unique_ptr<Bag> bestBag = std::make_unique<Bag>(*initialBag);
+    auto bestBag = std::make_unique<Bag>(*initialBag);
     bestBag->setMetaheuristicParameters("k_max=" + std::to_string(k_max));
 
     auto start_time = std::chrono::steady_clock::now();
-    auto deadline = start_time + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-        std::chrono::duration<double>(m_maxTime));
+    auto deadline = start_time +
+        std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(m_maxTime)
+    );
 
-    // === Variable Neighborhood Descent Loop ===
+    int k = 0;
     while (k < k_max) {
-        if (std::chrono::steady_clock::now() > deadline){
-            break;
-        }
+        if (std::chrono::steady_clock::now() > deadline) break;
 
-        // Create a local copy for current neighborhood search
-        std::unique_ptr<Bag> currentBagSearch = std::make_unique<Bag>(*bestBag);
-
-        // Perform local search for this neighborhood
+        // --- Sequential neighborhood evaluation ---
+        auto candidateBag = std::make_unique<Bag>(*bestBag);
         m_searchEngine.localSearch(
-            *currentBagSearch,
+            *candidateBag,
             bagSize,
             allPackages,
             movements[k],
@@ -64,24 +54,20 @@ std::unique_ptr<Bag> VND::run(int bagSize, const Bag* initialBag,
             2000,
             deadline
         );
-        currentBagSearch->setMovementType(movements[k]);
 
-        SolutionRepair::repair(*currentBagSearch, bagSize, dependencyGraph);
+        candidateBag->setMovementType(movements[k]);
+        SolutionRepair::repair(*candidateBag, bagSize, dependencyGraph);
 
-        bool improved = currentBagSearch->getBenefit() > bestBag->getBenefit();
-
-        if (improved) {
-            bestBag = std::move(currentBagSearch);
-            k = 0;
+        if (candidateBag->getBenefit() > bestBag->getBenefit()) {
+            bestBag = std::move(candidateBag);
+            k = 0; // restart from first neighborhood
         } else {
-            ++k;
+            ++k; // move to next neighborhood
         }
     }
 
     auto end_time = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
-
-    bestBag->setAlgorithmTime(elapsed_seconds.count());
+    bestBag->setAlgorithmTime(std::chrono::duration<double>(end_time - start_time).count());
     bestBag->setBagAlgorithm(Algorithm::ALGORITHM_TYPE::VND);
     bestBag->setLocalSearch(Algorithm::LOCAL_SEARCH::NONE);
 

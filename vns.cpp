@@ -1,47 +1,61 @@
 #include "vns.h"
-#include <chrono>
-#include <algorithm>
 #include "bag.h"
 #include "package.h"
 #include "dependency.h"
 #include "vns_helper.h"
+#include <chrono>
+#include <algorithm>
 
-VNS::VNS(double maxTime, unsigned int seed) : m_maxTime(maxTime), m_searchEngine(seed) {}
+VNS::VNS(double maxTime, unsigned int seed) 
+    : m_maxTime(maxTime), m_searchEngine(seed) {}
 
-std::unique_ptr<Bag> VNS::run(int bagSize, const Bag* initialBag,
-                              const std::vector<Package*>& allPackages,
-                              const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
+std::unique_ptr<Bag> VNS::run(
+    int bagSize,
+    const Bag* initialBag,
+    const std::vector<Package*>& allPackages,
+    const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
 {
-    if (!initialBag) {
+    if (!initialBag) 
         return std::make_unique<Bag>(Algorithm::ALGORITHM_TYPE::NONE, "0");
-    }
 
     auto start_time = std::chrono::steady_clock::now();
-    auto deadline = start_time + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-        std::chrono::duration<double>(m_maxTime));
-
-    // The bestBag is now the one provided, copied
-    auto bestBag = std::make_unique<Bag>(*initialBag);
-    
-    // Call the centralized VNS loop logic
-    // We pass our single m_searchEngine, as VNS is single-threaded
-    VnsHelper::vnsLoop(
-        *bestBag,
-        bagSize,
-        allPackages,
-        dependencyGraph,
-        m_searchEngine,
-        200,   // MAX_ITERATIONS
-        2000,  // MAX_NO_IMPROVEMENT
-        deadline
+    auto deadline = start_time +
+        std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(m_maxTime)
     );
 
+    auto bestBag = std::make_unique<Bag>(*initialBag);
+
+    const int k_max = 5;
+    const int maxIterations = 200;
+    const int maxNoImprovement = 2000;
+
+    SearchEngine localEngine(m_searchEngine.getSeed());
+
+    for (int iter = 0; iter < maxIterations; ++iter) {
+        bool improvementFound = false;
+
+        // Sequential evaluation of neighborhoods
+        for (int k = 1; k <= k_max; ++k) {
+            auto candidate = std::make_unique<Bag>(*bestBag);
+            VnsHelper::vnsLoop(*candidate, bagSize, allPackages, dependencyGraph,
+                                localEngine, 1, 1, deadline, false);
+
+            if (candidate->getBenefit() > bestBag->getBenefit()) {
+                *bestBag = *candidate;
+                improvementFound = true;
+            }
+        }
+
+        if (!improvementFound) break;
+        if (std::chrono::steady_clock::now() >= deadline) break;
+    }
+
     auto end_time = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end_time - start_time;
-    bestBag->setAlgorithmTime(elapsed_seconds.count());
+    bestBag->setAlgorithmTime(std::chrono::duration<double>(end_time - start_time).count());
     bestBag->setBagAlgorithm(Algorithm::ALGORITHM_TYPE::VNS);
-    bestBag->setLocalSearch(Algorithm::LOCAL_SEARCH::NONE); // VNS is the metaheuristic
-    bestBag->setMetaheuristicParameters("k_max=5"); // k_max is hardcoded in helper
+    bestBag->setLocalSearch(Algorithm::LOCAL_SEARCH::NONE);
+    bestBag->setMetaheuristicParameters("k_max=" + std::to_string(k_max));
 
     return bestBag;
 }

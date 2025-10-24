@@ -19,15 +19,16 @@ class Dependency;
 /**
  * @brief GRASP_VNS combines GRASP construction and VNS intensification phases.
  *
- * It runs multiple threads, each performing randomized greedy construction
- * (GRASP) followed by a Variable Neighborhood Search (VNS) local optimization.
+ * Each thread independently performs randomized greedy construction (GRASP)
+ * followed by a Variable Neighborhood Search (VNS) improvement phase. 
+ * Periodically, the best solution is synchronized across threads.
  */
 class GRASP_VNS {
 public:
     /**
      * @brief Construct a new GRASP_VNS solver.
      * @param maxTime Maximum execution time (in seconds)
-     * @param seed Random seed
+     * @param seed Random seed for reproducibility
      * @param rclSize Restricted Candidate List size
      * @param alpha GRASP alpha parameter (0=greedy, 1=random, <0=randomized)
      */
@@ -39,8 +40,8 @@ public:
      * @param allPackages List of all packages
      * @param moveType Movement type for the local search
      * @param dependencyGraph Map of package dependencies
-     * @param maxLS_IterationsWithoutImprovement Max iterations without improvement in LS
-     * @param max_Iterations Max GRASP iterations
+     * @param maxLS_IterationsWithoutImprovement Max iterations without improvement in local search
+     * @param max_Iterations Maximum GRASP iterations
      * @return std::unique_ptr<Bag> The best solution found
      */
     std::unique_ptr<Bag> run(
@@ -66,18 +67,23 @@ private:
         std::mutex* bestBagMutex;
     };
 
-    // ---------------- Core Worker ----------------
+    /**
+     * @brief Core worker executed by each thread.
+     * Performs multiple GRASP + VNS iterations, updating the global best solution.
+     * Uses thread-local buffers and lightweight synchronization.
+     */
     void graspWorker(WorkerContext ctx);
 
-    // ---------------- Internal State ----------------
+    // ---------------- Internal Parameters ----------------
     double m_maxTime;                 ///< Maximum allowed runtime (seconds)
-    double m_alpha;                   ///< Greedy-randomness control parameter
-    double m_alpha_random;            ///< Randomized alpha (updated per iteration)
+    double m_alpha;                   ///< GRASP alpha (balance between greediness and randomness)
+    double m_alpha_random;            ///< Randomized alpha (used when < 0)
     int m_rclSize;                    ///< Restricted Candidate List size
-    SearchEngine m_searchEngine;      ///< Base search engine for all threads
+    SearchEngine m_searchEngine;      ///< Base random engine (thread-local copies are used per worker)
 
-    std::atomic<long long> m_totalIterations{0}; ///< Total number of iterations
-    std::atomic<long long> m_improvements{0};    ///< Total number of improvements
+    // ---------------- Statistics ----------------
+    std::atomic<long long> m_totalIterations{0}; ///< Total number of iterations across threads
+    std::atomic<long long> m_improvements{0};    ///< Total number of improvements across threads
 };
 
 #endif // GRASP_VNS_H

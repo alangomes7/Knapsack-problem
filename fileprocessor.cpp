@@ -119,7 +119,7 @@ void saveData(const std::vector<std::unique_ptr<Bag>>& bags,
 {
     if (bags.empty() || outputDir.empty()) return;
 
-    const std::string csvFile = outputDir + "/summary_results-" + fileId + ".csv";
+    const std::string csvFile = outputDir + "/summary_results-" + formatTimestampForFilename(fileId) + ".csv";
 
     bool writeHeader = false;
     {

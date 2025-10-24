@@ -1,6 +1,9 @@
 #include "grasp.h"
 #include "grasp_helper.h"
 
+static constexpr int DEFAULT_TIME_CHECK_FREQ = 10;             // check time every N iterations
+static constexpr int DEFAULT_SYNC_FREQ = 10;                    // sync best bag every N iterations
+
 GRASP::GRASP(double maxTime, unsigned int seed, int rclSize, double alpha)
     : m_maxTime(maxTime),
       m_alpha(alpha),
@@ -80,54 +83,61 @@ void GRASP::graspWorker(WorkerContext ctx) {
     thread_local std::vector<std::pair<Package*, double>> candidateScoresBuffer;
     thread_local std::vector<Package*> rclBuffer;
 
+    // local copy of best bag
     std::unique_ptr<Bag> localBest;
     {
         std::lock_guard<std::mutex> lk(*ctx.bestBagMutex);
         localBest = std::make_unique<Bag>(*(*ctx.bestBagOverall));
     }
 
-    const int timeCheckFreq = 64;
+    auto workerStart = std::chrono::steady_clock::now();
+
     while (localIterations < ctx.max_Iterations) {
         ++localIterations;
 
-        // Call the helper function for construction
+        // 1. GRASP construction
         auto currentBag = GraspHelper::constructionPhaseFast(
             ctx.bagSize, *ctx.allPackages, *ctx.dependencyGraph, localEngine,
             candidateScoresBuffer, rclBuffer,
-            m_rclSize,      // Pass member variable
-            m_alpha,        // Pass member variable
-            m_alpha_random  // Pass member variable (by ref)
+            m_rclSize, m_alpha, m_alpha_random
         );
 
-        // Run the original local search phase
-        localSearchPhase(localEngine, *currentBag, ctx.bagSize, *ctx.allPackages,
-                         ctx.moveType, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, *ctx.dependencyGraph,
-                         ctx.maxLS_IterationsWithoutImprovement, ctx.max_Iterations, ctx.deadline);
+        // 2. Only run local search if solution is promising
+        if (currentBag->getSize() < static_cast<int>(ctx.bagSize * 0.95) || currentBag->getBenefit() > localBest->getBenefit()) {
+            localSearchPhase(localEngine, *currentBag, ctx.bagSize, *ctx.allPackages,
+                             ctx.moveType, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT,
+                             *ctx.dependencyGraph, ctx.maxLS_IterationsWithoutImprovement,
+                             ctx.max_Iterations, ctx.deadline);
+        }
 
+        // 3. Check improvement
         if (currentBag->getBenefit() > localBest->getBenefit()) {
             localBest = std::move(currentBag);
             ++localImprovements;
         }
 
-        // ... (Syncing logic is identical to original grasp.cpp) ...
-        if ((localIterations & 0xF) == 0) {
+        // 4. Batch-update global best
+        if ((localIterations % DEFAULT_SYNC_FREQ) == 0) {
             std::lock_guard<std::mutex> lk(*ctx.bestBagMutex);
             if (localBest->getBenefit() > (*ctx.bestBagOverall)->getBenefit()) {
                 *ctx.bestBagOverall = std::make_unique<Bag>(*localBest);
             }
         }
-        if ((localIterations % timeCheckFreq) == 0) {
+
+        // 5. Periodic time check
+        if ((localIterations % DEFAULT_TIME_CHECK_FREQ) == 0) {
             if (std::chrono::steady_clock::now() >= ctx.deadline) break;
         }
     }
 
-    // ... (Final sync and stats accumulation) ...
+    // 6. Final sync
     {
         std::lock_guard<std::mutex> lk(*ctx.bestBagMutex);
         if (localBest->getBenefit() > (*ctx.bestBagOverall)->getBenefit()) {
             *ctx.bestBagOverall = std::make_unique<Bag>(*localBest);
         }
     }
+
     m_totalIterations.fetch_add(localIterations, std::memory_order_relaxed);
     m_improvements.fetch_add(localImprovements, std::memory_order_relaxed);
 }

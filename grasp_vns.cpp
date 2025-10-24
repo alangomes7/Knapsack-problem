@@ -2,6 +2,12 @@
 #include "grasp_helper.h"
 #include "vns_helper.h"
 
+// --- Add these tuning constants near top of file or inside GRASP_VNS as static members ---
+static constexpr int DEFAULT_VNS_FREQUENCY = 2;                // run VNS every 2 GRASP iterations (set to 1 to always run)
+static constexpr double DEFAULT_MIN_REMAINING_TIME_FOR_VNS = 0.5; // seconds; require at least this time to run VNS
+static constexpr int DEFAULT_TIME_CHECK_FREQ = 10;             // check time every N iterations
+static constexpr int DEFAULT_SYNC_FREQ = 10;                    // sync best bag every N iterations
+
 // ------------------- Constructor -------------------
 GRASP_VNS::GRASP_VNS(double maxTime, unsigned int seed, int rclSize, double alpha)
     : m_maxTime(maxTime),
@@ -74,7 +80,6 @@ std::unique_ptr<Bag> GRASP_VNS::run(
     return bestBagOverall;
 }
 
-
 // ------------------- Grasp Worker -------------------
 void GRASP_VNS::graspWorker(WorkerContext ctx) {
     SearchEngine localEngine(m_searchEngine.getSeed());
@@ -84,68 +89,93 @@ void GRASP_VNS::graspWorker(WorkerContext ctx) {
     thread_local std::vector<std::pair<Package*, double>> candidateScoresBuffer;
     thread_local std::vector<Package*> rclBuffer;
 
+    // local copy of the best bag (start from the global best)
     std::unique_ptr<Bag> localBest;
     {
         std::lock_guard<std::mutex> lk(*ctx.bestBagMutex);
         localBest = std::make_unique<Bag>(*(*ctx.bestBagOverall));
     }
 
-    const int timeCheckFreq = 16;
+    const int vnsFrequency = DEFAULT_VNS_FREQUENCY;
+    const double minRemainingTimeForVNS = DEFAULT_MIN_REMAINING_TIME_FOR_VNS;
+    const int timeCheckFreq = DEFAULT_TIME_CHECK_FREQ;
+    const int syncFreq = DEFAULT_SYNC_FREQ;
+
+    auto workerStart = std::chrono::steady_clock::now();
+
     while (localIterations < ctx.max_Iterations) {
         ++localIterations;
 
-        // 1. GRASP Construction Phase
+        // 1. GRASP Construction Phase (fast construction)
         std::unique_ptr<Bag> currentBag = GraspHelper::constructionPhaseFast(
-            ctx.bagSize, *ctx.allPackages, *ctx.dependencyGraph, 
+            ctx.bagSize, *ctx.allPackages, *ctx.dependencyGraph,
             localEngine,
-            candidateScoresBuffer, 
+            candidateScoresBuffer,
             rclBuffer,
-            m_rclSize,      // Pass member variable
-            m_alpha,        // Pass member variable
-            m_alpha_random  // Pass member variable (by ref)
+            m_rclSize,
+            m_alpha,
+            m_alpha_random
         );
-        
+
         double benefitBeforeVNS = currentBag->getBenefit();
 
-        // 2. VNS Intensification Phase
-        VnsHelper::vnsLoop(
-            *currentBag, // Pass the bag to be improved
-            ctx.bagSize,
-            *ctx.allPackages,
-            *ctx.dependencyGraph,
-            localEngine, // Use the thread-local engine
-            ctx.maxLS_IterationsWithoutImprovement,
-            ctx.max_Iterations,
-            ctx.deadline
-        );
+        // Decide whether to run VNS now:
+        bool runVnsThisIteration = (vnsFrequency <= 1) || ((localIterations % vnsFrequency) == 0);
+
+        if (runVnsThisIteration) {
+            // Compute remaining time safely (deadline may be shared across threads)
+            auto now = std::chrono::steady_clock::now();
+            const auto remaining = ctx.deadline - now;
+            double remainingSeconds = std::chrono::duration_cast<std::chrono::duration<double>>(remaining).count();
+
+            // Only run VNS if we still have enough time left
+            if (remainingSeconds >= minRemainingTimeForVNS) {
+                // Call VNS intensification (existing heavy routine)
+                VnsHelper::vnsLoop(
+                    *currentBag,
+                    ctx.bagSize,
+                    *ctx.allPackages,
+                    *ctx.dependencyGraph,
+                    localEngine,
+                    ctx.maxLS_IterationsWithoutImprovement,
+                    ctx.max_Iterations,
+                    ctx.deadline
+                );
+            } else {
+                // Not enough time: skip VNS and keep the constructed solution
+            }
+        }
 
         // 3. Check for improvement
         if (currentBag->getBenefit() > localBest->getBenefit()) {
-            if(currentBag->getBenefit() > benefitBeforeVNS) {
+            if (currentBag->getBenefit() > benefitBeforeVNS) {
                 ++localImprovements;
             }
             localBest = std::move(currentBag);
         }
 
-        // ... (Syncing logic is identical to original grasp.cpp) ...
-        if ((localIterations & 0x3) == 0) {
+        // Batch-update global best less often to reduce locking overhead
+        if ((localIterations % syncFreq) == 0) {
             std::lock_guard<std::mutex> lk(*ctx.bestBagMutex);
             if (localBest->getBenefit() > (*ctx.bestBagOverall)->getBenefit()) {
                 *ctx.bestBagOverall = std::make_unique<Bag>(*localBest);
             }
         }
+
+        // Periodic time check to allow graceful exit before deadline
         if ((localIterations % timeCheckFreq) == 0) {
             if (std::chrono::steady_clock::now() >= ctx.deadline) break;
         }
     }
-    
-    // ... (Final sync and stats accumulation) ...
+
+    // Final sync to global best
     {
         std::lock_guard<std::mutex> lk(*ctx.bestBagMutex);
         if (localBest->getBenefit() > (*ctx.bestBagOverall)->getBenefit()) {
             *ctx.bestBagOverall = std::make_unique<Bag>(*localBest);
         }
     }
+
     m_totalIterations.fetch_add(localIterations, std::memory_order_relaxed);
     m_improvements.fetch_add(localImprovements, std::memory_order_relaxed);
 }
