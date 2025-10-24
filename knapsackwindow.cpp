@@ -79,7 +79,9 @@ void knapsackWindow::on_pushButton_findBag_clicked()
     double maxExecutionTime = time.minute() * 60 + time.second();
     int seed = ui->spinBox_algorithmSeed->value();
     int maxExecutions = ui->spinBox_executionTimes->value();
-    std::string timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss").toStdString();
+    std::string timestamp = QDateTime::currentDateTime()
+                                .toString("yyyy-MM-dd_HH-mm-ss")
+                                .toStdString();
 
     QFileInfo fileInfo(ui->pushButton_problem->text());
     QString folderPath = fileInfo.absolutePath();
@@ -93,7 +95,6 @@ void knapsackWindow::on_pushButton_findBag_clicked()
     // --- Background run (non-blocking) ---
     m_future = QtConcurrent::run([=, this]() mutable {
 
-        // Helper: duration formatting
         auto formatDuration = [](long long totalMs) -> QString {
             long long hours = totalMs / 3600000;
             int minutes = (totalMs % 3600000) / 60000;
@@ -108,10 +109,8 @@ void knapsackWindow::on_pushButton_findBag_clicked()
 
         auto resetUI = [=, this]() {
             QMetaObject::invokeMethod(this, [=]() {
-                if (ui->pushButton_stop) {
-                    ui->pushButton_stop->setText("Stop");
-                    ui->pushButton_stop->setEnabled(true);
-                }
+                ui->pushButton_stop->setText("Stop");
+                ui->pushButton_stop->setEnabled(true);
                 ui->pushButton_findBag->setEnabled(true);
                 ui->pushButton_problem->setEnabled(true);
             }, Qt::QueuedConnection);
@@ -126,54 +125,54 @@ void knapsackWindow::on_pushButton_findBag_clicked()
             FileProcessor::formatTimestampForFilename(timestamp)
         );
 
+        std::vector<std::unique_ptr<Bag>> allResults;
+        allResults.reserve(maxExecutions * 10); // preallocate some space
+        std::mutex saveMutex;
         std::atomic<int> completed{0};
 
-        // === Thread pool setup ===
-        QThreadPool pool;
-        int maxThreads = std::max(2u, std::thread::hardware_concurrency() / 2);
-        pool.setMaxThreadCount(maxThreads);
-
-        qDebug() << "Running" << maxExecutions << "executions with"
-                 << pool.maxThreadCount() << "parallel threads.";
-
-        // === Prepare tasks ===
-        QList<int> tasks;
-        for (int i = 0; i < maxExecutions; ++i)
-            tasks.append(i);
-
-        // === Parallel map ===
-        QtConcurrent::blockingMap(&pool, tasks, [&](int execution) {
-            if (m_stopRequested) return;
+        for (int execution = 0; execution < maxExecutions; ++execution) {
+            if (m_stopRequested) break;
 
             auto exec_start = std::chrono::steady_clock::now();
-            auto bagsExecution = algorithm.run(
-                problemCopy,
-                timestamp
-            );
+
+            // --- Run algorithm once (sequential) ---
+            auto resultBags = algorithm.run(problemCopy, timestamp + 
+                " | execution: " + std::to_string(execution + 1));
+
             auto exec_end = std::chrono::steady_clock::now();
-
-            if (m_stopRequested) return;
-
             auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                 exec_end - exec_start
             );
 
-            // Estimate total time based on first finished execution
+            // --- Save results (thread-safe section) ---
+            {
+                std::lock_guard<std::mutex> lock(saveMutex);
+                for (auto& bag : resultBags)
+                    allResults.push_back(std::move(bag));
+
+                FileProcessor::saveData(
+                    allResults,
+                    folderPath.toStdString(),
+                    fileName.toStdString(),
+                    FileProcessor::formatTimestampForFilename(timestamp)
+                );
+            }
+
+            // --- Estimate total time based on first execution ---
             if (execution == 0) {
                 firstExecutionTime = elapsedMs;
                 auto estimatedTotalMs = firstExecutionTime.count() * maxExecutions;
+
                 QMetaObject::invokeMethod(this, [=]() {
-                    if (ui->timeEdit_estimatedTotalTime) {
-                        ui->timeEdit_estimatedTotalTime->setDisplayFormat("hh:mm:ss.zzz");
-                        QTime estimatedTime = QTime::fromMSecsSinceStartOfDay(
-                            static_cast<int>(estimatedTotalMs % 86400000)
-                        );
-                        ui->timeEdit_estimatedTotalTime->setTime(estimatedTime);
-                    }
+                    ui->timeEdit_estimatedTotalTime->setDisplayFormat("hh:mm:ss.zzz");
+                    QTime estimated = QTime::fromMSecsSinceStartOfDay(
+                        static_cast<int>(estimatedTotalMs % 86400000)
+                    );
+                    ui->timeEdit_estimatedTotalTime->setTime(estimated);
                 }, Qt::QueuedConnection);
             }
 
-            // Progress bar update
+            // --- Update progress ---
             int progressValue = static_cast<int>(
                 (100.0 * (++completed)) / maxExecutions
             );
@@ -181,24 +180,22 @@ void knapsackWindow::on_pushButton_findBag_clicked()
             QMetaObject::invokeMethod(ui->progressBar, "setValue", Qt::QueuedConnection,
                                       Q_ARG(int, progressValue));
 
-            // Update elapsed total time
+            // --- Update elapsed overall time ---
             auto now = std::chrono::steady_clock::now();
             auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                 now - start_time
             ).count();
 
             QMetaObject::invokeMethod(this, [=]() {
-                if (ui->timeEdit_executionTimeOverall) {
-                    ui->timeEdit_executionTimeOverall->setDisplayFormat("hh:mm:ss.zzz");
-                    QTime partialTime = QTime::fromMSecsSinceStartOfDay(
-                        static_cast<int>(durationMs % 86400000)
-                    );
-                    ui->timeEdit_executionTimeOverall->setTime(partialTime);
-                }
+                ui->timeEdit_executionTimeOverall->setDisplayFormat("hh:mm:ss.zzz");
+                QTime partial = QTime::fromMSecsSinceStartOfDay(
+                    static_cast<int>(durationMs % 86400000)
+                );
+                ui->timeEdit_executionTimeOverall->setTime(partial);
             }, Qt::QueuedConnection);
-        });
+        }
 
-        // === After all parallel executions ===
+        // --- Handle early stop ---
         if (m_stopRequested) {
             QMetaObject::invokeMethod(ui->progressBar, "setValue", Qt::QueuedConnection,
                                       Q_ARG(int, 0));
@@ -207,25 +204,20 @@ void knapsackWindow::on_pushButton_findBag_clicked()
             return;
         }
 
-        // Final timing
+        // --- Final total timing ---
         auto end_time = std::chrono::steady_clock::now();
         auto totalDurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
             end_time - start_time
         ).count();
 
-        QString finalString = formatDuration(totalDurationMs);
         QMetaObject::invokeMethod(this, [=]() {
-            if (ui->timeEdit_executionTimeOverall) {
-                ui->timeEdit_executionTimeOverall->setDisplayFormat("hh:mm:ss.zzz");
-                QTime finalTime = QTime::fromMSecsSinceStartOfDay(
-                    static_cast<int>(totalDurationMs % 86400000)
-                );
-                ui->timeEdit_executionTimeOverall->setTime(finalTime);
-            }
+            ui->progressBar->setValue(100);
+            ui->timeEdit_executionTimeOverall->setDisplayFormat("hh:mm:ss.zzz");
+            QTime finalTime = QTime::fromMSecsSinceStartOfDay(
+                static_cast<int>(totalDurationMs % 86400000)
+            );
+            ui->timeEdit_executionTimeOverall->setTime(finalTime);
         }, Qt::QueuedConnection);
-
-        QMetaObject::invokeMethod(ui->progressBar, "setValue", Qt::QueuedConnection,
-                                  Q_ARG(int, 100));
 
         resetUI();
     });
