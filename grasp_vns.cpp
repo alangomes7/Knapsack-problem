@@ -1,7 +1,9 @@
-#include "grasp.h"
+#include "grasp_vns.h"
 #include "grasp_helper.h"
+#include "vns_helper.h"
 
-GRASP::GRASP(double maxTime, unsigned int seed, int rclSize, double alpha)
+// ------------------- Constructor -------------------
+GRASP_VNS::GRASP_VNS(double maxTime, unsigned int seed, int rclSize, double alpha)
     : m_maxTime(maxTime),
       m_alpha(alpha),
       m_alpha_random(alpha),
@@ -11,7 +13,8 @@ GRASP::GRASP(double maxTime, unsigned int seed, int rclSize, double alpha)
 }
 
 // ------------------- run -------------------
-std::unique_ptr<Bag> GRASP::run(
+// This function (thread management) is identical to GRASP's
+std::unique_ptr<Bag> GRASP_VNS::run(
     int bagSize,
     const std::vector<Package*>& allPackages,
     SearchEngine::MovementType moveType,
@@ -19,6 +22,8 @@ std::unique_ptr<Bag> GRASP::run(
     int maxLS_IterationsWithoutImprovement,
     int max_Iterations)
 {
+    // ... (Setup code is identical to original grasp.cpp) ...
+    
     if (allPackages.empty()) {
         return std::make_unique<Bag>(Algorithm::ALGORITHM_TYPE::NONE, "0");
     }
@@ -42,14 +47,14 @@ std::unique_ptr<Bag> GRASP::run(
         WorkerContext ctx;
         ctx.bagSize = bagSize;
         ctx.allPackages = &allPackages;
-        ctx.moveType = moveType;
+        ctx.moveType = moveType; 
         ctx.dependencyGraph = &dependencyGraph;
         ctx.maxLS_IterationsWithoutImprovement = maxLS_IterationsWithoutImprovement;
         ctx.max_Iterations = max_Iterations;
         ctx.deadline = deadline;
         ctx.bestBagOverall = &bestBagOverall;
         ctx.bestBagMutex = &bestBagMutex;
-        workers.emplace_back(&GRASP::graspWorker, this, std::move(ctx));
+        workers.emplace_back(&GRASP_VNS::graspWorker, this, std::move(ctx));
     }
     for (auto& w : workers) {
         if (w.joinable()) w.join();
@@ -57,22 +62,21 @@ std::unique_ptr<Bag> GRASP::run(
     auto end_time = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     bestBagOverall->setAlgorithmTime(elapsed_seconds.count());
-    bestBagOverall->setBagAlgorithm(Algorithm::ALGORITHM_TYPE::GRASP);
+    bestBagOverall->setBagAlgorithm(Algorithm::ALGORITHM_TYPE::GRASP_VNS); 
     bestBagOverall->setLocalSearch(Algorithm::LOCAL_SEARCH::NONE);
     bestBagOverall->setMovementType(moveType);
-    std::cout << "GRASP completed: " << m_totalIterations.load() << " iterations, "
-              << m_improvements.load() << " improvements" << std::endl;
     bestBagOverall->setMetaheuristicParameters(
         "Alpha: " + std::to_string(m_alpha_random) +
-        " | Improvements: " + std::to_string(m_improvements.load()) +
+        " | VNS Improvements: " + std::to_string(m_improvements.load()) +
         " | RCL size: " + std::to_string(m_rclSize) +
-        " | Total iterations: " + std::to_string(m_totalIterations.load())
+        " | Total GRASP iterations: " + std::to_string(m_totalIterations.load())
     );
     return bestBagOverall;
 }
 
+
 // ------------------- Grasp Worker -------------------
-void GRASP::graspWorker(WorkerContext ctx) {
+void GRASP_VNS::graspWorker(WorkerContext ctx) {
     SearchEngine localEngine(m_searchEngine.getSeed());
     long long localIterations = 0;
     long long localImprovements = 0;
@@ -86,31 +90,45 @@ void GRASP::graspWorker(WorkerContext ctx) {
         localBest = std::make_unique<Bag>(*(*ctx.bestBagOverall));
     }
 
-    const int timeCheckFreq = 64;
+    const int timeCheckFreq = 16;
     while (localIterations < ctx.max_Iterations) {
         ++localIterations;
 
-        // Call the helper function for construction
-        auto currentBag = GraspHelper::constructionPhaseFast(
-            ctx.bagSize, *ctx.allPackages, *ctx.dependencyGraph, localEngine,
-            candidateScoresBuffer, rclBuffer,
+        // 1. GRASP Construction Phase
+        std::unique_ptr<Bag> currentBag = GraspHelper::constructionPhaseFast(
+            ctx.bagSize, *ctx.allPackages, *ctx.dependencyGraph, 
+            localEngine,
+            candidateScoresBuffer, 
+            rclBuffer,
             m_rclSize,      // Pass member variable
             m_alpha,        // Pass member variable
             m_alpha_random  // Pass member variable (by ref)
         );
+        
+        double benefitBeforeVNS = currentBag->getBenefit();
 
-        // Run the original local search phase
-        localSearchPhase(localEngine, *currentBag, ctx.bagSize, *ctx.allPackages,
-                         ctx.moveType, Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT, *ctx.dependencyGraph,
-                         ctx.maxLS_IterationsWithoutImprovement, ctx.max_Iterations, ctx.deadline);
+        // 2. VNS Intensification Phase
+        VnsHelper::vnsLoop(
+            *currentBag, // Pass the bag to be improved
+            ctx.bagSize,
+            *ctx.allPackages,
+            *ctx.dependencyGraph,
+            localEngine, // Use the thread-local engine
+            ctx.maxLS_IterationsWithoutImprovement,
+            ctx.max_Iterations,
+            ctx.deadline
+        );
 
+        // 3. Check for improvement
         if (currentBag->getBenefit() > localBest->getBenefit()) {
+            if(currentBag->getBenefit() > benefitBeforeVNS) {
+                ++localImprovements;
+            }
             localBest = std::move(currentBag);
-            ++localImprovements;
         }
 
         // ... (Syncing logic is identical to original grasp.cpp) ...
-        if ((localIterations & 0xF) == 0) {
+        if ((localIterations & 0x3) == 0) {
             std::lock_guard<std::mutex> lk(*ctx.bestBagMutex);
             if (localBest->getBenefit() > (*ctx.bestBagOverall)->getBenefit()) {
                 *ctx.bestBagOverall = std::make_unique<Bag>(*localBest);
@@ -120,7 +138,7 @@ void GRASP::graspWorker(WorkerContext ctx) {
             if (std::chrono::steady_clock::now() >= ctx.deadline) break;
         }
     }
-
+    
     // ... (Final sync and stats accumulation) ...
     {
         std::lock_guard<std::mutex> lk(*ctx.bestBagMutex);
@@ -130,24 +148,4 @@ void GRASP::graspWorker(WorkerContext ctx) {
     }
     m_totalIterations.fetch_add(localIterations, std::memory_order_relaxed);
     m_improvements.fetch_add(localImprovements, std::memory_order_relaxed);
-}
-
-// ------------------- local Search Phase -------------------
-// This function was unique to GRASP, so it stays.
-void GRASP::localSearchPhase(
-    SearchEngine& searchEngine,
-    Bag& bag,
-    int bagSize,
-    const std::vector<Package*>& allPackages,
-    SearchEngine::MovementType moveType,
-    Algorithm::LOCAL_SEARCH localSearchMethod,
-    const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
-    int maxLS_IterationsWithoutImprovement,
-    int maxLS_Iterations,
-    const std::chrono::steady_clock::time_point& deadline)
-{
-    if (bag.getBenefit() > 0 && bag.getSize() >= static_cast<int>(bagSize * 0.95)) return;
-
-    searchEngine.localSearch(bag, bagSize, allPackages, moveType, localSearchMethod,
-        dependencyGraph, maxLS_IterationsWithoutImprovement, maxLS_Iterations, deadline);
 }

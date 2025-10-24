@@ -8,19 +8,17 @@
 #include "package.h"
 #include "dependency.h"
 #include "algorithm.h"
-
-VND::VND(double maxTime)
-    : m_maxTime(maxTime), m_searchEngine(0), m_metaheuristicHelper() {}
+#include "solution_repair.h"
 
 VND::VND(double maxTime, unsigned int seed)
-    : m_maxTime(maxTime), m_searchEngine(seed), m_metaheuristicHelper(seed) {}
+    : m_maxTime(maxTime), m_searchEngine(seed) {}
 
-Bag* VND::run(int bagSize, const Bag* initialBag,
+std::unique_ptr<Bag> VND::run(int bagSize, const Bag* initialBag,
               const std::vector<Package*>& allPackages,
               const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
 {
     if (!initialBag) {
-        return new Bag(Algorithm::ALGORITHM_TYPE::NONE, "0");
+        return std::make_unique<Bag>(Algorithm::ALGORITHM_TYPE::NONE, "0");
     }
 
     // Neighborhood structures
@@ -68,13 +66,13 @@ Bag* VND::run(int bagSize, const Bag* initialBag,
         );
         currentBagSearch->setMovementType(movements[k]);
 
-        m_metaheuristicHelper.makeItFeasible(*currentBagSearch, bagSize, dependencyGraph);
+        SolutionRepair::repair(*currentBagSearch, bagSize, dependencyGraph);
 
         bool improved = currentBagSearch->getBenefit() > bestBag->getBenefit();
 
         if (improved) {
             bestBag = std::move(currentBagSearch);
-            k = 0; // Restart from first neighborhood
+            k = 0;
         } else {
             ++k;
         }
@@ -87,5 +85,5 @@ Bag* VND::run(int bagSize, const Bag* initialBag,
     bestBag->setBagAlgorithm(Algorithm::ALGORITHM_TYPE::VND);
     bestBag->setLocalSearch(Algorithm::LOCAL_SEARCH::NONE);
 
-    return new Bag(*bestBag);
+    return bestBag;
 }

@@ -3,9 +3,10 @@
 
 #include <vector>
 #include <unordered_map>
+#include <memory>
+
 #include "algorithm.h"
-#include "searchEngine.h"
-#include "metaheuristicHelper.h"
+#include "search_engine.h"
 
 // Forward declarations
 class Bag;
@@ -22,8 +23,7 @@ class Algorithm;
  */
 class VND {
 public:
-    explicit VND(double maxTime);
-    VND(double maxTime, unsigned int seed);
+    explicit VND(double maxTime, unsigned int seed);
 
     /**
      * @brief Runs the VND algorithm.
@@ -33,14 +33,13 @@ public:
      * @param dependencyGraph A precomputed graph of package dependencies.
      * @return A pointer to the best found solution (Bag).
      */
-    Bag* run(int bagSize, const Bag* initialBag,
+    std::unique_ptr<Bag> run(int bagSize, const Bag* initialBag,
               const std::vector<Package*>& allPackages,
               const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph);
 
 private:
     const double m_maxTime;
     SearchEngine m_searchEngine;
-    MetaheuristicHelper m_metaheuristicHelper;
 };
 
 #endif // VND_H

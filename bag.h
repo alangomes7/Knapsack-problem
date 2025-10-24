@@ -6,7 +6,8 @@
 #include <unordered_set>
 #include <unordered_map>
 #include "algorithm.h"
-#include "searchEngine.h"
+#include "search_engine.h"
+#include "solution_repair.h"
 
 class Package;
 class Dependency;
@@ -30,8 +31,10 @@ public:
     Algorithm::LOCAL_SEARCH getBagLocalSearch() const;
     SearchEngine::MovementType getMovementType() const;
     double getAlgorithmTime() const;
+    std::string getAlgorithmTimeString() const;
     std::string getTimestamp() const;
-    const std::string& getMetaheuristicParameters() const;
+    std::string getMetaheuristicParameters() const;
+    SolutionRepair::FeasibilityStrategy getFeasibilityStrategy() const;
 
     // --- Setters ---
     void setTimestamp(const std::string& timestamp);
@@ -40,6 +43,7 @@ public:
     void setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm);
     void setMovementType(SearchEngine::MovementType movementType);
     void setMetaheuristicParameters(const std::string& params);
+    void setFeasibilityStrategy(SolutionRepair::FeasibilityStrategy feasibilityStrategy);
 
     // --- Core Bag Operations ---
     bool addPackage(const Package& package, const std::vector<const Dependency*>& dependencies);
@@ -83,10 +87,13 @@ public:
 
     std::string toString(SearchEngine::MovementType movement) const;
 
+    std::string toString(SolutionRepair::FeasibilityStrategy feasibilityStrategy) const;
+
 private:
     Algorithm::ALGORITHM_TYPE m_bagAlgorithm;
     Algorithm::LOCAL_SEARCH m_localSearch;
     SearchEngine::MovementType m_movementType;
+    SolutionRepair::FeasibilityStrategy m_feasibilityStrategy;
     std::string m_timeStamp = "0000-00-00 00:00:00";
     int m_size;
     int m_benefit;

@@ -113,12 +113,13 @@ ProblemInstance loadProblem(const std::string& filename) {
 }
 
 void saveData(const std::vector<std::unique_ptr<Bag>>& bags,
-              const std::string& outputDir,
-              const std::string& inputFilename)
+            const std::string& outputDir,
+            const std::string& inputFilename,
+            const std::string& fileId)
 {
     if (bags.empty() || outputDir.empty()) return;
 
-    const std::string csvFile = outputDir + "/summary_results.csv";
+    const std::string csvFile = outputDir + "/summary_results-" + fileId + ".csv";
 
     bool writeHeader = false;
     {
@@ -135,14 +136,22 @@ void saveData(const std::vector<std::unique_ptr<Bag>>& bags,
         return;
     }
 
+    std::string separator = ",";
+
     if (writeHeader) {
-        outFile << "Algorithm,Movement,File name,Timestamp,Processing Time (s),"
-                   "Packages,Dependencies,Bag Weight,Bag Benefit\n";
+        outFile << "Algorithm" << separator
+                << "Movement" << separator
+                << "Feasibility Strategy" << separator
+                << "File name" << separator
+                << "Timestamp" << separator
+                << "Processing Time (h:m:s.ms)" << separator
+                << "Packages" << separator
+                << "Dependencies" << separator
+                << "Bag Weight" << separator
+                << "Bag Benefit" << "\n";
     }
 
-
-    Algorithm algHelper(0, 0);
-
+    Algorithm algHelper(0, 0, "", "", "");
     for (const std::unique_ptr<Bag>& bag : bags) {
         if (!bag) continue;
 
@@ -150,14 +159,15 @@ void saveData(const std::vector<std::unique_ptr<Bag>>& bags,
         std::string locStr = algHelper.toString(bag->getBagLocalSearch());
         if (locStr != "None") algStr += " | " + locStr;
 
-        outFile << algStr << ","
-                << bag->toString(bag->getMovementType()) << ","
-                << inputFilename << ","
-                << bag->getTimestamp() << ","
-                << std::fixed << std::setprecision(5) << bag->getAlgorithmTime() << ","
-                << bag->getPackages().size() << ","
-                << bag->getDependencies().size() << ","
-                << bag->getSize() << ","
+        outFile << algStr << separator
+                << bag->toString(bag->getMovementType()) << separator
+                << bag->toString(bag->getFeasibilityStrategy()) << separator
+                << inputFilename << separator
+                << bag->getTimestamp() << separator
+                << bag->getAlgorithmTimeString() << separator
+                << bag->getPackages().size() << separator
+                << bag->getDependencies().size() << separator
+                << bag->getSize() << separator
                 << bag->getBenefit() << "\n";
     }
 }

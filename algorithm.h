@@ -27,25 +27,27 @@ public:
     enum class ALGORITHM_TYPE {
         NONE,
         RANDOM,
-        GREEDY_Package_Benefit,
-        GREEDY_Package_Benefit_Ratio,
-        GREEDY_Package_Size,
-        RANDOM_GREEDY_Package_Benefit,
-        RANDOM_GREEDY_Package_Benefit_Ratio,
-        RANDOM_GREEDY_Package_Size,
+        GREEDY_PACKAGE_BENEFIT,
+        GREEDY_PACKAGE_BENEFIT_RATIO,
+        GREEDY_PACKAGE_SIZE,
+        RANDOM_GREEDY_PACKAGE_BENEFIT,
+        RANDOM_GREEDY_PACKAGE_BENEFIT_RATIO,
+        RANDOM_GREEDY_PACKAGE_SIZE,
         VND,
         VNS,
-        GRASP
+        GRASP,
+        GRASP_VNS
     };
 
     enum class LOCAL_SEARCH {
         FIRST_IMPROVEMENT,
         BEST_IMPROVEMENT,
         RANDOM_IMPROVEMENT,
-        NONE
+        NONE,
+        VNS
     };
 
-    explicit Algorithm(double maxTime, unsigned int seed);
+    explicit Algorithm(double maxTime, unsigned int seed, const std::string& outputDir, const std::string& inputFile, const std::string &fileId);
 
     std::vector<std::unique_ptr<Bag>> run(const ProblemInstance& problemInstance, const std::string& timestamp);
 
@@ -57,6 +59,9 @@ private:
     void precomputeDependencyGraph(const std::vector<Package*>& packages,
                                    const std::vector<Dependency*>& dependencies);
 
+    const std::string m_outputDir;
+    const std::string m_inputFile;
+    const std::string m_fileId;
     std::string m_timestamp;
     std::unordered_map<const Package*, std::vector<const Dependency*>> m_dependencyGraph;
     const double m_maxTime;

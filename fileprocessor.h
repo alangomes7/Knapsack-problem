@@ -37,10 +37,12 @@ ProblemInstance loadProblem(const std::string& filename);
  * @param bags The vector of Bag pointers containing solution data.
  * @param outputDir The directory to save the file in.
  * @param inputFilename The name of the original problem file (for logging).
+ * @param fileId The id of the file to save in. It is used in case of multiple run to keep the results separated.
  */
 void saveData(const std::vector<std::unique_ptr<Bag>>& bags,
-              const std::string& outputDir,
-              const std::string& inputFilename);
+            const std::string& outputDir,
+            const std::string& inputFilename,
+            const std::string& fileId);
 
 /**
  * @brief Saves a detailed .txt report for the best solution found,

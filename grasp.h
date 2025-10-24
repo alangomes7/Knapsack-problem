@@ -1,70 +1,63 @@
-#ifndef GRASP_H
-#define GRASP_H
+#pragma once
 
-#include <vector>
-#include <random>
-#include <unordered_map>
-#include <memory>
+#include <chrono>
+#include <thread>
 #include <mutex>
 #include <atomic>
-#include <chrono>
+#include <limits>
+#include <memory>
 #include <algorithm>
+#include <random>
+#include <iostream>
 #include <numeric>
+#include <cmath>
+#include <vector>
+#include <unordered_map>
+#include <string>
 
 #include "algorithm.h"
-#include "searchEngine.h"
+#include "bag.h"
+#include "package.h"
+#include "dependency.h"
+#include "search_engine.h"
 
-class Bag;
-class Package;
-class Dependency;
+// WorkerContext reused to pass args into worker thread
+struct WorkerContext {
+    int bagSize = 0;
+    const std::vector<Package*>* allPackages = nullptr;
+    SearchEngine::MovementType moveType{};
+    const std::unordered_map<const Package*, std::vector<const Dependency*>>* dependencyGraph = nullptr;
+    int maxLS_IterationsWithoutImprovement = 0;
+    int max_Iterations = 0;
+    std::chrono::steady_clock::time_point deadline{};
+    std::unique_ptr<Bag>* bestBagOverall = nullptr;
+    std::mutex* bestBagMutex = nullptr;
+};
 
-/**
- * @brief Enhanced GRASP (Greedy Randomized Adaptive Search Procedure) metaheuristic.
- */
 class GRASP {
 public:
-    explicit GRASP(double maxTime, double alpha = 0.3, int rclSize = 10);
-    GRASP(double maxTime, unsigned int seed, double alpha = 0.3, int rclSize = 10);
-    
-    ~GRASP() = default;
-    GRASP(const GRASP&) = delete;
-    GRASP& operator=(const GRASP&) = delete;
+    GRASP(double maxTime, unsigned int seed, int rclSize, double alpha = -1);
 
-    Bag* run(int bagSize,
-             const std::vector<Bag*>& initialBags,
-             const std::vector<Package*>& allPackages,
-             SearchEngine::MovementType moveType,
-             Algorithm::LOCAL_SEARCH localSearchMethod,
-             const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
-             int maxLS_IterationsWithoutImprovement = 150,
-             int maxLS_Iterations = 1500);
-
-    // Configuration setters
-    void setAlpha(double alpha) { m_alpha = std::clamp(alpha, 0.0, 1.0); }
-    void setRCLSize(int size) { m_rclSize = std::max(1, size); }
+    std::unique_ptr<Bag> run(
+        int bagSize,
+        const std::vector<Package*>& allPackages,
+        SearchEngine::MovementType moveType,
+        const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
+        int maxLS_IterationsWithoutImprovement,
+        int max_Iterations);
 
 private:
-    // Worker thread context to avoid complex parameter passing
-    struct WorkerContext {
-        int bagSize;
-        const std::vector<Package*>* allPackages;
-        SearchEngine::MovementType moveType;
-        Algorithm::LOCAL_SEARCH localSearchMethod;
-        const std::unordered_map<const Package*, std::vector<const Dependency*>>* dependencyGraph;
-        int maxLS_IterationsWithoutImprovement;
-        int maxLS_Iterations;
-        std::chrono::steady_clock::time_point deadline;  // Correct type
-        std::unique_ptr<Bag>* bestBagOverall;
-        std::mutex* bestBagMutex;
-    };
-
-    // --- Core GRASP stages ---
-    std::unique_ptr<Bag> constructionPhase(
+    // worker and phases
+    void graspWorker(WorkerContext ctx);
+    std::unique_ptr<Bag> constructionPhaseFast(
         int bagSize,
         const std::vector<Package*>& allPackages,
         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
-        SearchEngine& searchEngine);
-
+        SearchEngine& searchEngine,
+        std::vector<std::pair<Package*, double>>& candidateScoresBuffer,
+        std::vector<Package*>& rclBuffer);
+    double calculateGreedyScore(const Package* pkg, const Bag& bag,
+                                const std::vector<const Dependency*>& dependencies) const;
     void localSearchPhase(
         SearchEngine& searchEngine,
         Bag& bag,
@@ -77,25 +70,14 @@ private:
         int maxLS_Iterations,
         const std::chrono::steady_clock::time_point& deadline);
 
-    // Main worker function - simplified signature
-    void graspWorker(WorkerContext context);
-
-    // --- Helper methods ---
-    double calculateGreedyScore(const Package* pkg, const Bag& bag, 
-                               const std::vector<const Dependency*>& dependencies) const;
-    unsigned int getThreadSeed() const;
-
 private:
     const double m_maxTime;
-    double m_alpha;  // RCL parameter [0,1]
-    int m_rclSize;   // Maximum RCL size
-    
+    const double m_alpha;
+    double m_alpha_random;
+    const int m_rclSize;
     SearchEngine m_searchEngine;
-    mutable std::atomic<unsigned int> m_seedCounter{0};
-    
-    // Statistics
-    std::atomic<int> m_totalIterations{0};
-    std::atomic<int> m_improvements{0};
-};
 
-#endif // GRASP_H
+    std::atomic<long long> m_totalIterations{0};
+    std::atomic<long long> m_improvements{0};
+    std::atomic<uint32_t> m_seedCounter{0};
+};

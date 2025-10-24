@@ -65,6 +65,32 @@ double Bag::getAlgorithmTime() const {
     return m_algorithmTimeSeconds;
 }
 
+std::string Bag::getAlgorithmTimeString() const
+{
+    double total_seconds = m_algorithmTimeSeconds;
+
+    // Break down hours and minutes
+    int hours = static_cast<int>(total_seconds / 3600);
+    total_seconds -= hours * 3600;
+
+    int minutes = static_cast<int>(total_seconds / 60);
+    total_seconds -= minutes * 60;
+
+    int seconds = static_cast<int>(total_seconds);
+
+    // 5-digit rounded fractional seconds (hundred-thousandths)
+    int ms5 = static_cast<int>((total_seconds - seconds) * 100000 + 0.5);
+
+    // Format: HH:MM:SS:MSMSMSMSMS (5 digits)
+    std::ostringstream oss;
+    oss << std::setfill('0') << std::setw(2) << hours << ":"
+        << std::setw(2) << minutes << ":"
+        << std::setw(2) << seconds << ":"
+        << std::setw(5) << ms5;
+
+    return oss.str();
+}
+
 /**
  * @brief Gets the timestamp for when the bag was created.
  * @return The timestamp string.
@@ -77,8 +103,13 @@ std::string Bag::getTimestamp() const {
  * @brief Gets the string of parameters used by a metaheuristic algorithm.
  * @return The metaheuristic parameters.
  */
-const std::string& Bag::getMetaheuristicParameters() const {
+std::string Bag::getMetaheuristicParameters() const {
     return m_metaheuristicParams;
+}
+
+SolutionRepair::FeasibilityStrategy Bag::getFeasibilityStrategy() const
+{
+    return m_feasibilityStrategy;
 }
 
 // =====================================================================================
@@ -217,6 +248,11 @@ void Bag::setMovementType(SearchEngine::MovementType movementType)
  */
 void Bag::setMetaheuristicParameters(const std::string& params) {
     m_metaheuristicParams = params;
+}
+
+void Bag::setFeasibilityStrategy(SolutionRepair::FeasibilityStrategy feasibilityStrategy)
+{
+    m_feasibilityStrategy = feasibilityStrategy;
 }
 
 // =====================================================================================
@@ -387,6 +423,19 @@ std::string Bag::toString(SearchEngine::MovementType movement) const
         return "SWAP_REMOVE_2_ADD_1";
     default:
     return "EJECTION_CHAIN";
+    }
+}
+
+std::string Bag::toString(SolutionRepair::FeasibilityStrategy feasibilityStrategy) const
+{
+    switch (feasibilityStrategy)
+    {
+    case SolutionRepair::FeasibilityStrategy::SMART:
+        return "SMART";
+    case SolutionRepair::FeasibilityStrategy::TEMPERATURE_BIASED:
+        return "TEMPERATURE_BIASED";
+    default:
+    return "PROBABILISTIC_GREEDY";
     }
 }
 

@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find Qt 6.10.0 specifically
-find_package(Qt6 6.10.0 REQUIRED COMPONENTS Widgets LinguistTools)
+find_package(Qt6 6.10.0 REQUIRED COMPONENTS Widgets LinguistTools Concurrent)
 
 # --- Define Project Files ---
 
@@ -35,6 +35,13 @@ set(PROJECT_SOURCES
     solution_repair.cpp
     random_provider.cpp
     constructive_solutions.cpp
+    search_engine.cpp
+    vnd.cpp
+    vns.cpp
+    grasp.cpp
+    grasp_vns.cpp
+    grasp_helper.cpp
+    vns_helper.cpp
 )
 
 set(PROJECT_HEADERS
@@ -48,6 +55,13 @@ set(PROJECT_HEADERS
     solution_repair.h
     random_provider.h
     constructive_solutions.h
+    search_engine.h
+    vnd.h
+    vns.h
+    grasp.h
+    grasp_vns.h
+    grasp_helper.h
+    vns_helper.h
 )
 
 set(PROJECT_UIS
@@ -70,6 +84,7 @@ qt_add_executable(KnapsackProblem
 # Link the required Qt modules. Qt6::Widgets automatically links Core and Gui.
 target_link_libraries(KnapsackProblem PRIVATE
     Qt6::Widgets
+    Qt6::Concurrent
 )
 
 # --- Set Target Properties ---
