@@ -56,7 +56,7 @@ std::unique_ptr<Bag> VND::run(int bagSize, const Bag* initialBag,
         );
 
         candidateBag->setMovementType(movements[k]);
-        SOLUTION_REPAIR::repair(*candidateBag, bagSize, dependencyGraph);
+        SOLUTION_REPAIR::repair(*candidateBag, bagSize, dependencyGraph, m_searchEngine.getRandomGenerator());
 
         if (candidateBag->getBenefit() > bestBag->getBenefit()) {
             bestBag = std::move(candidateBag);

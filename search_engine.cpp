@@ -146,8 +146,7 @@ void SearchEngine::perturbation(
     int addCount = 0;
     for (Package* candidate : packagesOutsideBag) {
         if (addCount >= removeCount) break;
-        if (currentBag.canAddPackage(*candidate, bagSize, dependencyGraph.at(candidate))) {
-            currentBag.addPackage(*candidate, dependencyGraph.at(candidate));
+        if (currentBag.addPackageIfPossible(*candidate, bagSize, dependencyGraph.at(candidate))) {
             addCount++;
         }
     }
@@ -166,8 +165,7 @@ bool SearchEngine::tryAddPackage(
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
 {
     for (Package* p : packagesOutsideBag) {
-        if (currentBag.canAddPackage(*p, bagSize, dependencyGraph.at(p))) {
-            currentBag.addPackage(*p, dependencyGraph.at(p));
+        if (currentBag.addPackageIfPossible(*p, bagSize, dependencyGraph.at(p))) {
             return true;
         }
     }
@@ -186,9 +184,11 @@ bool SearchEngine::exploreSwap11NeighborhoodFirstImprovement(
     for (const Package* packageIn : packagesInVec) {
         for (Package* packageOut : packagesOutsideBag) {
             if (packageOut->getBenefit() <= packageIn->getBenefit()) continue;
-            if (currentBag.canSwapReadOnly(*packageIn, *packageOut, bagSize)) {
+            // <-- FIX: Pass vectors {packageIn} and {packageOut} and the dependencyGraph
+            if (currentBag.canSwapReadOnly({packageIn}, {packageOut}, bagSize, dependencyGraph)) {
                 currentBag.removePackage(*packageIn, dependencyGraph.at(packageIn));
-                currentBag.addPackage(*packageOut, dependencyGraph.at(packageOut));
+                // <-- FIX: Call addPackageIfPossible and pass bagSize
+                currentBag.addPackageIfPossible(*packageOut, bagSize, dependencyGraph.at(packageOut));
                 return true;
             }
         }
@@ -213,9 +213,11 @@ bool SearchEngine::exploreSwap11NeighborhoodRandomImprovement(
         Package* packageOut = packagesOutsideBag[disOut(m_rng)];
 
         if (packageOut->getBenefit() <= packageIn->getBenefit()) continue;
-        if (currentBag.canSwapReadOnly(*packageIn, *packageOut, bagSize)) {
+        // <-- FIX: Pass vectors {packageIn} and {packageOut} and the dependencyGraph
+        if (currentBag.canSwapReadOnly({packageIn}, {packageOut}, bagSize, dependencyGraph)) {
             currentBag.removePackage(*packageIn, dependencyGraph.at(packageIn));
-            currentBag.addPackage(*packageOut, dependencyGraph.at(packageOut));
+            // <-- FIX: Call addPackageIfPossible and pass bagSize
+            currentBag.addPackageIfPossible(*packageOut, bagSize, dependencyGraph.at(packageOut));
             return true;
         }
     }
@@ -267,7 +269,8 @@ bool SearchEngine::exploreSwap11NeighborhoodBestImprovement(
             }
             // --- END PRUNING LOGIC ---
             
-            if (currentBag.canSwapReadOnly(*p_in, *p_out, bagSize)) {
+            // <-- FIX: Pass vectors {p_in} and {p_out} and the dependencyGraph
+            if (currentBag.canSwapReadOnly({p_in}, {p_out}, bagSize, dependencyGraph)) {
                 bestSwap = {potential_delta, p_in, p_out};
             }
         }
@@ -276,7 +279,8 @@ bool SearchEngine::exploreSwap11NeighborhoodBestImprovement(
 
     if (bestSwap.p_in) {
         currentBag.removePackage(*bestSwap.p_in, dependencyGraph.at(bestSwap.p_in));
-        currentBag.addPackage(*bestSwap.p_out, dependencyGraph.at(bestSwap.p_out));
+        // <-- FIX: Call addPackageIfPossible and pass bagSize
+        currentBag.addPackageIfPossible(*bestSwap.p_out, bagSize, dependencyGraph.at(bestSwap.p_out));
         return true;
     }
     return false;
@@ -310,7 +314,8 @@ bool SearchEngine::exploreSwap12NeighborhoodBestImprovement(
                 int delta = (p_out1->getBenefit() + p_out2->getBenefit()) - p_in->getBenefit();
                 if (delta <= bestMove.delta) continue;
                 
-                if (currentBag.canSwapReadOnly(*p_in, {p_out1, p_out2}, bagSize, dependencyGraph)) {
+                // <-- FIX: Pass vector {p_in} as the first argument
+                if (currentBag.canSwapReadOnly({p_in}, {p_out1, p_out2}, bagSize, dependencyGraph)) {
                     bestMove = {delta, p_in, p_out1, p_out2};
                 }
             }
@@ -321,8 +326,10 @@ bool SearchEngine::exploreSwap12NeighborhoodBestImprovement(
 
     if (bestMove.p_in) {
         currentBag.removePackage(*bestMove.p_in, dependencyGraph.at(bestMove.p_in));
-        currentBag.addPackage(*bestMove.p_out1, dependencyGraph.at(bestMove.p_out1));
-        currentBag.addPackage(*bestMove.p_out2, dependencyGraph.at(bestMove.p_out2));
+        // <-- FIX: Call addPackageIfPossible and pass bagSize
+        currentBag.addPackageIfPossible(*bestMove.p_out1, bagSize, dependencyGraph.at(bestMove.p_out1));
+        // <-- FIX: Call addPackageIfPossible and pass bagSize
+        currentBag.addPackageIfPossible(*bestMove.p_out2, bagSize, dependencyGraph.at(bestMove.p_out2));
         return true;
     }
     return false;
@@ -354,7 +361,8 @@ bool SearchEngine::exploreSwap21NeighborhoodBestImprovement(
                 int delta = p_out->getBenefit() - (p_in1->getBenefit() + p_in2->getBenefit());
                 if (delta <= bestMove.delta) continue;
                 
-                if (currentBag.canSwapReadOnly({p_in1, p_in2}, *p_out, bagSize, dependencyGraph)) {
+                // <-- FIX: Pass vector {p_out} as the second argument
+                if (currentBag.canSwapReadOnly({p_in1, p_in2}, {p_out}, bagSize, dependencyGraph)) {
                     bestMove = {delta, p_in1, p_in2, p_out};
                 }
             }
@@ -366,7 +374,8 @@ bool SearchEngine::exploreSwap21NeighborhoodBestImprovement(
     if (bestMove.p_in1) {
         currentBag.removePackage(*bestMove.p_in1, dependencyGraph.at(bestMove.p_in1));
         currentBag.removePackage(*bestMove.p_in2, dependencyGraph.at(bestMove.p_in2));
-        currentBag.addPackage(*bestMove.p_out, dependencyGraph.at(bestMove.p_out));
+        // <-- FIX: Call addPackageIfPossible and pass bagSize
+        currentBag.addPackageIfPossible(*bestMove.p_out, bagSize, dependencyGraph.at(bestMove.p_out));
         return true;
     }
     return false;
@@ -482,7 +491,8 @@ bool SearchEngine::exploreEjectionChainNeighborhoodBestImprovement(
         for (const auto* p_to_remove : bestMove.ejectionSet) {
             currentBag.removePackage(*p_to_remove, dependencyGraph.at(p_to_remove));
         }
-        currentBag.addPackage(*bestMove.packageToAdd, dependencyGraph.at(bestMove.packageToAdd));
+        // <-- FIX: Call addPackageIfPossible and pass bagSize
+        currentBag.addPackageIfPossible(*bestMove.packageToAdd, bagSize, dependencyGraph.at(bestMove.packageToAdd));
         return true;
     }
 

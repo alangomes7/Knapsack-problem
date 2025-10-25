@@ -6,6 +6,7 @@
 #include <random>
 #include <unordered_map>
 #include <memory>
+#include <unordered_set> // Include for unordered_set
 
 #include "bag.h"
 #include "package.h"
@@ -36,8 +37,10 @@ private:
     std::vector<Package*> sortedPackagesByBenefitToSizeRatio(const std::vector<Package*>& packages);
     std::vector<Package*> sortedPackagesBySize(const std::vector<Package*>& packages);
 
-    bool canPackageBeAdded(const Bag& bag, const Package& package, int maxCapacity,
-                           std::unordered_map<const Package*, bool>& cache);
+    // FIX: Added inBagCache parameter
+    bool canPackageBeAdded(Bag& bag, const Package& package, int maxCapacity,
+                           std::unordered_map<const Package*, bool>& compatibilityCache,
+                           std::unordered_set<const Package*>& inBagCache);
 
     double m_maxTime;
     std::mt19937& m_generator;

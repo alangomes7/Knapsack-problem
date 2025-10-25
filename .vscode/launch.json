@@ -6,12 +6,12 @@
             "name": "(gdb) Launch KnapsackProblem",
             "type": "cppdbg",
             "request": "launch",
-            // Correct path for a single-config build
-            "program": "${workspaceFolder}/build/KnapsackProblem.exe",
+            // FIX: Point to the 'install' directory
+            "program": "${workspaceFolder}/build/install/bin/KnapsackProblem.exe",
             "args": [],
             "stopAtEntry": false,
-            // CWD must also point to the build directory
-            "cwd": "${workspaceFolder}/build",
+            // FIX: Set CWD to the executable's folder
+            "cwd": "${workspaceFolder}/build/install/bin",
             "environment": [
                 {
                     // This is correct: adds Qt's bin directory to the PATH for running
@@ -29,7 +29,6 @@
                     "ignoreFailures": true
                 }
             ],
-            // Use the default CMake Tools build task
             "preLaunchTask": "CMake: build"
         }
     ]

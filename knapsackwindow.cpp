@@ -38,7 +38,7 @@ void knapsackWindow::initializeUi()
     ui->spinBox_algorithmSeed->setRange(0, 100);
     ui->spinBox_algorithmSeed->setValue(75);
     ui->spinBox_executionTimes->setRange(1, 100);
-    ui->spinBox_executionTimes->setValue(5);
+    ui->spinBox_executionTimes->setValue(1);
 }
 
 void knapsackWindow::on_pushButton_problem_clicked()

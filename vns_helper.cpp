@@ -23,6 +23,7 @@ std::unique_ptr<Bag> shake(const Bag& currentBag, int k,
 
     int removeCount = std::min<int>(k, static_cast<int>(packagesInBag.size()));
     for (int i = 0; i < removeCount; ++i) {
+        // Note: This is inefficient for std::unordered_set, but correct
         int offset = RANDOM_PROVIDER::getInt(0, packagesInBag.size() - 1);
         auto it = packagesInBag.begin();
         std::advance(it, offset);
@@ -36,10 +37,13 @@ std::unique_ptr<Bag> shake(const Bag& currentBag, int k,
     for (Package* pkg : tmpOutside) {
         if (added >= k) break;
         const auto& deps = dependencyGraph.at(pkg);
-        if (newBag->canAddPackage(*pkg, bagSize, deps)) {
-            newBag->addPackage(*pkg, deps);
+        
+        // --- FIX ---
+        // Replaced canAddPackage/addPackage with addPackageIfPossible
+        if (newBag->addPackageIfPossible(*pkg, bagSize, deps)) {
             ++added;
         }
+        // --- END FIX ---
     }
 
     return newBag;
@@ -51,8 +55,7 @@ void vnsLoop(Bag& bestBag, int bagSize,
              SearchEngine& searchEngine,
              int maxLS_IterationsWithoutImprovement,
              int maxLS_Iterations,
-             const std::chrono::steady_clock::time_point& deadline,
-             bool parallel) // 'parallel' ignored
+             const std::chrono::steady_clock::time_point& deadline)
 {
     const std::vector<SEARCH_ENGINE::MovementType> movements = {
         SEARCH_ENGINE::MovementType::ADD,
@@ -71,12 +74,12 @@ void vnsLoop(Bag& bestBag, int bagSize,
     while (k < k_max && std::chrono::steady_clock::now() < deadline) {
         // Sequential shake + local search
         auto shakenBag = shake(*workingBest, k + 1, allPackages, bagSize, dependencyGraph, tmpOutside);
-        SOLUTION_REPAIR::repair(*shakenBag, bagSize, dependencyGraph);
+        SOLUTION_REPAIR::repair(*shakenBag, bagSize, dependencyGraph, searchEngine.getRandomGenerator());
         searchEngine.localSearch(*shakenBag, bagSize, allPackages, movements[k],
                                  searchMethod, dependencyGraph,
                                  maxLS_IterationsWithoutImprovement, maxLS_Iterations, deadline);
         shakenBag->setMovementType(movements[k]);
-        SOLUTION_REPAIR::repair(*shakenBag, bagSize, dependencyGraph);
+        SOLUTION_REPAIR::repair(*shakenBag, bagSize, dependencyGraph, searchEngine.getRandomGenerator());
 
         if (shakenBag->getBenefit() > workingBest->getBenefit()) {
             workingBest = std::move(shakenBag);

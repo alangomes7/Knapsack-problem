@@ -48,7 +48,6 @@ namespace VNS_HELPER {
      * @param maxLS_IterationsWithoutImprovement Max LS iterations without improvement.
      * @param maxLS_Iterations Max total LS iterations.
      * @param deadline Time limit.
-     * @param parallel If true, evaluate neighborhoods in parallel to accelerate exploration.
      */
     void vnsLoop(
         Bag& bestBag,
@@ -58,8 +57,7 @@ namespace VNS_HELPER {
         SearchEngine& searchEngine,
         int maxLS_IterationsWithoutImprovement,
         int maxLS_Iterations,
-        const std::chrono::steady_clock::time_point& deadline,
-        bool parallel = true
+        const std::chrono::steady_clock::time_point& deadline
     );
 
 } // namespace VNS_HELPER

@@ -4,17 +4,13 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <string>
+#include <random> // <-- ADDED: For std::mt19937
 
-// Forward declarations
 class Bag;
 class Package;
 class Dependency;
 
-/**
- * @brief Namespace that provides a function to repair an infeasible solution.
- *
- * You just call `SOLUTIONREPAIR::run(...)` passing all necessary parameters.
- */
 namespace SOLUTION_REPAIR {
 
 enum class FEASIBILITY_STRATEGY {
@@ -24,20 +20,28 @@ enum class FEASIBILITY_STRATEGY {
 };
 
 /**
- * @brief Repairs a Bag to satisfy maxCapacity by removing packages intelligently.
- * @param bag The bag to repair (modified in-place)
- * @param maxCapacity Capacity constraint
- * @param dependencyGraph Dependency map
- * @return true if a feasible solution was found, false otherwise
+ * @brief Validates and, if necessary, repairs a Bag.
+ *
+ * This function first validates the Bag's internal state. If invalid,
+ * it tests three parallel repair strategies (SMART, PROBABILISTIC_GREEDY,
+ * TEMPERATURE_BIASED) on copies of the Bag. The original Bag is then
+ * replaced with the best (highest benefit) feasible result.
+ *
+ * @param bag The Bag to validate and repair.
+ * @param maxCapacity The maximum allowed capacity.
+ * @param dependencyGraph The dependency graph.
+ * @param main_rng A seeded random number generator for reproducible results.
+ * @return true if the Bag is valid after the operation, false otherwise.
  */
 bool repair(
     Bag& bag,
     int maxCapacity,
-    const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph
+    const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
+    std::mt19937& main_rng // <-- MODIFIED: Added generator
 );
 
 std::string toString(FEASIBILITY_STRATEGY feasibilityStrategy);
 
-} // namespace SOLUTIONREPAIR
+} // namespace SOLUTION_REPAIR
 
 #endif // SOLUTION_REPAIR_H

@@ -60,7 +60,7 @@ std::unique_ptr<Bag> constructionPhaseFast(
             Package* pkg = allPackages[idx];
             const std::vector<const Dependency*>& deps = depsPtrs[idx] ? *depsPtrs[idx] : std::vector<const Dependency*>{};
 
-            if (bag->canAddPackage(*pkg, bagSize, deps)) {
+            if (bag->addPackageIfPossible(*pkg, bagSize, deps)) {
                 candidateScoresBuffer.emplace_back(pkg, calculateGreedyScore(pkg, *bag, deps));
             }
         }
@@ -104,9 +104,7 @@ std::unique_ptr<Bag> constructionPhaseFast(
                                                    *depsPtrs[std::distance(allPackages.begin(),
                                                                             std::find(allPackages.begin(), allPackages.end(), chosen))] : std::vector<const Dependency*>{};
 
-        if (bag->canAddPackage(*chosen, bagSize, deps)) {
-            bag->addPackage(*chosen, deps);
-        }
+        bag->addPackageIfPossible(*chosen, bagSize, deps);
 
         used[std::distance(allPackages.begin(), std::find(allPackages.begin(), allPackages.end(), chosen))] = 1;
         --remaining;

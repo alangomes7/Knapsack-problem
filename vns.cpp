@@ -39,7 +39,7 @@ std::unique_ptr<Bag> VNS::run(
         for (int k = 1; k <= k_max; ++k) {
             auto candidate = std::make_unique<Bag>(*bestBag);
             VNS_HELPER::vnsLoop(*candidate, bagSize, allPackages, dependencyGraph,
-                                localEngine, 1, 1, deadline, false);
+                                localEngine, 1, 1, deadline);
 
             if (candidate->getBenefit() > bestBag->getBenefit()) {
                 *bestBag = *candidate;

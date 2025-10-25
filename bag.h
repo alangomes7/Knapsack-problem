@@ -45,40 +45,22 @@ public:
     void setMetaheuristicParameters(const std::string& params);
     void setFeasibilityStrategy(SOLUTION_REPAIR::FEASIBILITY_STRATEGY feasibilityStrategy);
 
-    // --- Core Bag Operations ---
-    bool addPackage(const Package& package, const std::vector<const Dependency*>& dependencies);
+    // =====================================================================================
+    // SMART BAG OPERATIONS
+    // =====================================================================================
+
+    bool addPackageIfPossible(const Package& package, int maxCapacity,
+                              const std::vector<const Dependency*>& dependencies);
+
     void removePackage(const Package& package, const std::vector<const Dependency*>& dependencies);
 
-    // --- Feasibility Checks ---
-    bool canAddPackage(const Package& package, int maxCapacity, const std::vector<const Dependency*>& dependencies) const;
-    
-    // --- (DEPRECATED) Old canSwap method, kept for compatibility if needed ---
-    bool canSwap(const Package& packageIn, const Package& packageOut, int bagSize) const;
+    bool canSwapReadOnly(
+        const std::vector<const Package*>& packagesIn,
+        const std::vector<const Package*>& packagesOut,
+        int bagSize,
+        const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph
+    ) const noexcept;
 
-    /**
-     * @brief Checks if a 1-for-1 swap is feasible without modifying the bag.
-     * This version correctly handles shared dependencies.
-     */
-    bool canSwapReadOnly(const Package& packageIn, const Package& packageOut, int bagSize) const noexcept;
-
-    /**
-     * @brief Checks if swapping one package in the bag for multiple packages outside is feasible.
-     */
-    bool canSwapReadOnly(const Package& packageIn, const std::vector<Package*>& packagesOut, int bagSize,
-                         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph) const noexcept;
-
-    /**
-     * @brief Checks if swapping multiple packages in the bag for one package outside is feasible.
-     */
-    bool canSwapReadOnly(const std::vector<const Package*>& packagesIn, const Package& packageOut, int bagSize,
-                         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph) const noexcept;
-    
-    /**
-     * @brief Identifies packages in the bag whose dependencies are no longer met.
-     * This is essential for validating the bag's state after removals, especially for the Ejection Chain move.
-     * @param dependencyGraph The global dependency graph for lookups.
-     * @return A vector of const Package pointers that are now invalid.
-     */
     std::vector<const Package*> getInvalidPackages(
         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph) const;
 

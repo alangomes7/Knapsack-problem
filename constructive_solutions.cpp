@@ -3,6 +3,7 @@
 #include <chrono>
 #include <algorithm>
 #include <memory>
+#include <unordered_set> // Include for unordered_set
 
 #include "random_provider.h"
 #include "solution_repair.h"
@@ -143,6 +144,7 @@ std::unique_ptr<Bag> ConstructiveSolutions::fillBagWithStrategy(int bagSize, std
     }
 
     auto compatibilityCache = std::unordered_map<const Package*, bool>();
+    auto inBagCache = std::unordered_set<const Package*>(); // FIX: Create the new cache
     auto start_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> max_duration_seconds(m_maxTime);
     
@@ -155,15 +157,12 @@ std::unique_ptr<Bag> ConstructiveSolutions::fillBagWithStrategy(int bagSize, std
             break;
         }
 
-        // Pass the dereferenced unique_ptr (*bag)
-        if (canPackageBeAdded(*bag, *packageToAdd, bagSize, compatibilityCache)) {
-            const auto& deps = m_dependencyGraph.at(packageToAdd);
-            bag->addPackage(*packageToAdd, deps);
-        }
+        // FIX: Pass the new cache to the function
+        canPackageBeAdded(*bag, *packageToAdd, bagSize, compatibilityCache, inBagCache);
     }
     
     // Pass the dereferenced unique_ptr (*bag)
-    SOLUTION_REPAIR::repair(*bag, bagSize, m_dependencyGraph);
+    SOLUTION_REPAIR::repair(*bag, bagSize, m_dependencyGraph, m_generator);
 
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
@@ -172,14 +171,27 @@ std::unique_ptr<Bag> ConstructiveSolutions::fillBagWithStrategy(int bagSize, std
     return bag; // Return the std::unique_ptr
 }
 
-bool ConstructiveSolutions::canPackageBeAdded(const Bag& bag, const Package& package, int maxCapacity,
-                                  std::unordered_map<const Package*, bool>& cache) {
+// FIX: Added inBagCache parameter and logic
+bool ConstructiveSolutions::canPackageBeAdded(Bag& bag, const Package& package, int maxCapacity,
+                                  std::unordered_map<const Package*, bool>& cache,
+                                  std::unordered_set<const Package*>& inBagCache) {
+    
+    // FIX: Check if package is already in the bag cache
+    if (inBagCache.count(&package)) {
+        return false;
+    }
+    
     auto it = cache.find(&package);
     if (it != cache.end()) {
         return it->second;
     }
-     const auto& deps = m_dependencyGraph.at(&package);
-    bool result = bag.canAddPackage(package, maxCapacity, deps);
+    const auto& deps = m_dependencyGraph.at(&package);
+    bool result = bag.addPackageIfPossible(package, maxCapacity, deps);
     cache[&package] = result;
+    
+    if (result) {
+        inBagCache.insert(&package);
+    }
+    
     return result;
 }
