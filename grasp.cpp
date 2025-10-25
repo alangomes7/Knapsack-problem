@@ -76,7 +76,12 @@ std::unique_ptr<Bag> GRASP::run(
 
 // ------------------- Grasp Worker -------------------
 void GRASP::graspWorker(WorkerContext ctx) {
-    SearchEngine localEngine(m_searchEngine.getSeed());
+    unsigned int thread_seed;
+    {
+        std::lock_guard<std::mutex> lock(m_seeder_mutex);
+        thread_seed = m_searchEngine.getRandomGenerator()();
+    }
+    SearchEngine localEngine(thread_seed);
     long long localIterations = 0;
     long long localImprovements = 0;
 

@@ -76,6 +76,7 @@ private:
     double m_alpha_random;
     const int m_rclSize;
     SearchEngine m_searchEngine;
+    std::mutex m_seeder_mutex;
 
     std::atomic<long long> m_totalIterations{0};
     std::atomic<long long> m_improvements{0};
