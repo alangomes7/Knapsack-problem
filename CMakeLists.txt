@@ -27,6 +27,7 @@ qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 set(PROJECT_SOURCES
     main.cpp
     knapsackwindow.cpp
+    data_model.cpp
     file_processor.cpp
     package.cpp
     dependency.cpp
@@ -46,8 +47,8 @@ set(PROJECT_SOURCES
 
 set(PROJECT_HEADERS
     knapsackwindow.h
+    data_model.h
     file_processor.h
-    DataStructures.h
     package.h
     dependency.h
     bag.h

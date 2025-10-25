@@ -6,7 +6,7 @@
 #include <QFuture>
 #include <QFutureWatcher>
 
-#include "DataStructures.h"
+#include "data_model.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class knapsackWindow; }

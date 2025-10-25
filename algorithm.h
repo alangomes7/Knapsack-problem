@@ -8,7 +8,7 @@
 #include <random>
 #include <memory>
 
-#include "DataStructures.h"
+#include "data_model.h"
 
 class Bag;
 class Package;
