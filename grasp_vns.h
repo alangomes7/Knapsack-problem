@@ -47,7 +47,7 @@ public:
     std::unique_ptr<Bag> run(
         int bagSize,
         const std::vector<Package*>& allPackages,
-        SearchEngine::MovementType moveType,
+        SEARCH_ENGINE::MovementType moveType,
         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
         int maxLS_IterationsWithoutImprovement,
         int max_Iterations);
@@ -57,7 +57,7 @@ private:
     struct WorkerContext {
         int bagSize;
         const std::vector<Package*>* allPackages;
-        SearchEngine::MovementType moveType;
+        SEARCH_ENGINE::MovementType moveType;
         const std::unordered_map<const Package*, std::vector<const Dependency*>>* dependencyGraph;
         int maxLS_IterationsWithoutImprovement;
         int max_Iterations;

@@ -12,7 +12,7 @@
 /**
  * @brief Provides optimized helper functions for VNS-based algorithms.
  */
-namespace VnsHelper {
+namespace VNS_HELPER {
 
     /**
      * @brief Shakes the current solution to escape local optima.
@@ -62,4 +62,4 @@ namespace VnsHelper {
         bool parallel = true
     );
 
-} // namespace VnsHelper
+} // namespace VNS_HELPER

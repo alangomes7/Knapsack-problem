@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <limits>
 
-namespace GraspHelper {
+namespace GRASP_HELPER  {
 
 double calculateGreedyScore(const Package* pkg, const Bag& bag,
                             const std::vector<const Dependency*>& dependencies)
@@ -32,7 +32,7 @@ std::unique_ptr<Bag> constructionPhaseFast(
     double alpha,
     double& alpha_random_out)
 {
-    auto bag = std::make_unique<Bag>(Algorithm::ALGORITHM_TYPE::GRASP, "construction");
+    auto bag = std::make_unique<Bag>(ALGORITHM::ALGORITHM_TYPE::GRASP, "construction");
     std::mt19937& rng = searchEngine.getRandomGenerator();
 
     const size_t n = allPackages.size();
@@ -115,4 +115,4 @@ std::unique_ptr<Bag> constructionPhaseFast(
     return bag;
 }
 
-} // namespace GraspHelper
+} // namespace GRASP_HELPER 

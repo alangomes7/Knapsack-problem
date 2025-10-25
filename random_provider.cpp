@@ -9,7 +9,7 @@ namespace {
     bool g_initialized = false;
 }
 
-namespace RandomProvider {
+namespace RANDOM_PROVIDER {
 
 void initialize(unsigned int seed) {
     g_seed = seed;
@@ -57,4 +57,4 @@ double getDouble(double min, double max) {
     return dist(g_generator);
 }
 
-} // namespace RandomProvider
+} // namespace RANDOM_PROVIDER

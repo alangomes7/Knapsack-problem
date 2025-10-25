@@ -4,7 +4,7 @@
 #include "random_provider.h"
 #include <algorithm>
 
-namespace VnsHelper {
+namespace VNS_HELPER {
 
 std::unique_ptr<Bag> shake(const Bag& currentBag, int k,
                            const std::vector<Package*>& allPackages,
@@ -23,14 +23,14 @@ std::unique_ptr<Bag> shake(const Bag& currentBag, int k,
 
     int removeCount = std::min<int>(k, static_cast<int>(packagesInBag.size()));
     for (int i = 0; i < removeCount; ++i) {
-        int offset = RandomProvider::getInt(0, packagesInBag.size() - 1);
+        int offset = RANDOM_PROVIDER::getInt(0, packagesInBag.size() - 1);
         auto it = packagesInBag.begin();
         std::advance(it, offset);
         const Package* pkg = *it;
         newBag->removePackage(*pkg, dependencyGraph.at(pkg));
     }
 
-    std::shuffle(tmpOutside.begin(), tmpOutside.end(), RandomProvider::getGenerator());
+    std::shuffle(tmpOutside.begin(), tmpOutside.end(), RANDOM_PROVIDER::getGenerator());
 
     int added = 0;
     for (Package* pkg : tmpOutside) {
@@ -54,14 +54,14 @@ void vnsLoop(Bag& bestBag, int bagSize,
              const std::chrono::steady_clock::time_point& deadline,
              bool parallel) // 'parallel' ignored
 {
-    const std::vector<SearchEngine::MovementType> movements = {
-        SearchEngine::MovementType::ADD,
-        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1,
-        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_2,
-        SearchEngine::MovementType::SWAP_REMOVE_2_ADD_1,
-        SearchEngine::MovementType::EJECTION_CHAIN
+    const std::vector<SEARCH_ENGINE::MovementType> movements = {
+        SEARCH_ENGINE::MovementType::ADD,
+        SEARCH_ENGINE::MovementType::SWAP_REMOVE_1_ADD_1,
+        SEARCH_ENGINE::MovementType::SWAP_REMOVE_1_ADD_2,
+        SEARCH_ENGINE::MovementType::SWAP_REMOVE_2_ADD_1,
+        SEARCH_ENGINE::MovementType::EJECTION_CHAIN
     };
-    Algorithm::LOCAL_SEARCH searchMethod = Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT;
+    ALGORITHM::LOCAL_SEARCH searchMethod = ALGORITHM::LOCAL_SEARCH::BEST_IMPROVEMENT;
     const int k_max = static_cast<int>(movements.size());
 
     std::unique_ptr<Bag> workingBest = std::make_unique<Bag>(bestBag);
@@ -71,12 +71,12 @@ void vnsLoop(Bag& bestBag, int bagSize,
     while (k < k_max && std::chrono::steady_clock::now() < deadline) {
         // Sequential shake + local search
         auto shakenBag = shake(*workingBest, k + 1, allPackages, bagSize, dependencyGraph, tmpOutside);
-        SolutionRepair::repair(*shakenBag, bagSize, dependencyGraph);
+        SOLUTION_REPAIR::repair(*shakenBag, bagSize, dependencyGraph);
         searchEngine.localSearch(*shakenBag, bagSize, allPackages, movements[k],
                                  searchMethod, dependencyGraph,
                                  maxLS_IterationsWithoutImprovement, maxLS_Iterations, deadline);
         shakenBag->setMovementType(movements[k]);
-        SolutionRepair::repair(*shakenBag, bagSize, dependencyGraph);
+        SOLUTION_REPAIR::repair(*shakenBag, bagSize, dependencyGraph);
 
         if (shakenBag->getBenefit() > workingBest->getBenefit()) {
             workingBest = std::move(shakenBag);
@@ -89,4 +89,4 @@ void vnsLoop(Bag& bestBag, int bagSize,
     bestBag = std::move(*workingBest);
 }
 
-} // namespace VnsHelper
+} // namespace VNS_HELPER

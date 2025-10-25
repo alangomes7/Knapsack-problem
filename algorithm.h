@@ -15,6 +15,36 @@ class Package;
 class Dependency;
 class LocalSearch;
 
+namespace ALGORITHM {
+    
+enum class ALGORITHM_TYPE {
+    NONE,
+    RANDOM,
+    GREEDY_PACKAGE_BENEFIT,
+    GREEDY_PACKAGE_BENEFIT_RATIO,
+    GREEDY_PACKAGE_SIZE,
+    RANDOM_GREEDY_PACKAGE_BENEFIT,
+    RANDOM_GREEDY_PACKAGE_BENEFIT_RATIO,
+    RANDOM_GREEDY_PACKAGE_SIZE,
+    VND,
+    VNS,
+    GRASP,
+    GRASP_VNS
+};
+
+enum class LOCAL_SEARCH {
+    FIRST_IMPROVEMENT,
+    BEST_IMPROVEMENT,
+    RANDOM_IMPROVEMENT,
+    NONE,
+    VNS
+};
+
+std::string toString(ALGORITHM_TYPE algorithm);
+std::string toString(LOCAL_SEARCH localSearch);
+
+} // namespace ALGORITHM
+
 /**
  * @brief Provides a collection of algorithms to solve the package dependency knapsack problem.
  *
@@ -24,48 +54,20 @@ class LocalSearch;
  */
 class Algorithm {
 public:
-    enum class ALGORITHM_TYPE {
-        NONE,
-        RANDOM,
-        GREEDY_PACKAGE_BENEFIT,
-        GREEDY_PACKAGE_BENEFIT_RATIO,
-        GREEDY_PACKAGE_SIZE,
-        RANDOM_GREEDY_PACKAGE_BENEFIT,
-        RANDOM_GREEDY_PACKAGE_BENEFIT_RATIO,
-        RANDOM_GREEDY_PACKAGE_SIZE,
-        VND,
-        VNS,
-        GRASP,
-        GRASP_VNS
-    };
 
-    enum class LOCAL_SEARCH {
-        FIRST_IMPROVEMENT,
-        BEST_IMPROVEMENT,
-        RANDOM_IMPROVEMENT,
-        NONE,
-        VNS
-    };
-
-    explicit Algorithm(double maxTime, unsigned int seed, const std::string& outputDir, const std::string& inputFile, const std::string &fileId);
+    explicit Algorithm(double maxTime, unsigned int seed);
 
     std::vector<std::unique_ptr<Bag>> run(const ProblemInstance& problemInstance, const std::string& timestamp);
-
-    std::string toString(Algorithm::ALGORITHM_TYPE algorithm) const;
-    std::string toString(Algorithm::LOCAL_SEARCH localSearch) const;
 
 private:
 
     void precomputeDependencyGraph(const std::vector<Package*>& packages,
                                    const std::vector<Dependency*>& dependencies);
 
-    const std::string m_outputDir;
-    const std::string m_inputFile;
-    const std::string m_fileId;
-    std::string m_timestamp;
-    std::unordered_map<const Package*, std::vector<const Dependency*>> m_dependencyGraph;
     const double m_maxTime;
     std::mt19937 m_generator;
+    std::string m_timestamp;
+    std::unordered_map<const Package*, std::vector<const Dependency*>> m_dependencyGraph;
 };
 
 #endif // ALGORITHM_H

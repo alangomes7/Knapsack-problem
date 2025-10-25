@@ -9,7 +9,7 @@
 #include "dependency.h"
 #include "search_engine.h"
 
-namespace GraspHelper {
+namespace GRASP_HELPER {
 
     double calculateGreedyScore(
         const Package* pkg,
@@ -47,4 +47,4 @@ namespace GraspHelper {
         double alpha,
         double& alpha_random_out);
 
-} // namespace GraspHelper
+} // namespace GRASP_HELPER 

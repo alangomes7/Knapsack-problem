@@ -7,6 +7,25 @@
 #include "package.h"
 #include "dependency.h"
 
+namespace SEARCH_ENGINE {
+std::string toString(MovementType movement)
+{
+    switch (movement)
+    {
+        case MovementType::ADD:
+            return "ADD";
+        case MovementType::SWAP_REMOVE_1_ADD_1:
+            return "SWAP_REMOVE_1_ADD_1";
+        case MovementType::SWAP_REMOVE_1_ADD_2:
+            return "SWAP_REMOVE_1_ADD_2";
+        case MovementType::SWAP_REMOVE_2_ADD_1:
+            return "SWAP_REMOVE_2_ADD_1";
+        default:
+        return "EJECTION_CHAIN";
+    }
+}
+}
+
 // =====================================================================================
 // Public Methods
 // =====================================================================================
@@ -18,8 +37,8 @@ SearchEngine::SearchEngine(unsigned int seed) : m_rng(seed), m_seed(seed) {}
 // =====================================================================================
 void SearchEngine::localSearch(
     Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages,
-    const SearchEngine::MovementType& moveType,
-    Algorithm::LOCAL_SEARCH localSearchMethod,
+    const SEARCH_ENGINE::MovementType& moveType,
+    ALGORITHM::LOCAL_SEARCH localSearchMethod,
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
     int maxIterationsWithoutImprovement, int maxIterations, const std::chrono::time_point<std::chrono::steady_clock>& deadline)
 {
@@ -70,34 +89,33 @@ std::mt19937 & SearchEngine::getRandomGenerator()
 // Core Private Logic
 // =====================================================================================
 
-bool SearchEngine::applyMovement(
-    MovementType move, Bag& currentBag, int bagSize,
+bool SearchEngine::applyMovement(const SEARCH_ENGINE::MovementType& move, Bag& currentBag, int bagSize,
     const std::vector<Package*>& packagesOutsideBag,
-    Algorithm::LOCAL_SEARCH localSearchMethod,
+    ALGORITHM::LOCAL_SEARCH localSearchMethod,
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
     int maxIterations)
 {
     // Route the movement type to its corresponding neighborhood exploration function
     switch (move) {
-        case MovementType::ADD:
+        case SEARCH_ENGINE::MovementType::ADD:
             return tryAddPackage(currentBag, bagSize, packagesOutsideBag, dependencyGraph);
         
-        case MovementType::SWAP_REMOVE_1_ADD_1:
+        case SEARCH_ENGINE::MovementType::SWAP_REMOVE_1_ADD_1:
             switch (localSearchMethod) {
-                case Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT:
+                case ALGORITHM::LOCAL_SEARCH::BEST_IMPROVEMENT:
                     return exploreSwap11NeighborhoodBestImprovement(currentBag, bagSize, packagesOutsideBag, dependencyGraph, maxIterations);
-                case Algorithm::LOCAL_SEARCH::RANDOM_IMPROVEMENT:
+                case ALGORITHM::LOCAL_SEARCH::RANDOM_IMPROVEMENT:
                     return exploreSwap11NeighborhoodRandomImprovement(currentBag, bagSize, packagesOutsideBag, dependencyGraph, maxIterations);
                 default: // FIRST_IMPROVEMENT
                     return exploreSwap11NeighborhoodFirstImprovement(currentBag, bagSize, packagesOutsideBag, dependencyGraph);
             }
-        case MovementType::SWAP_REMOVE_1_ADD_2:
+        case SEARCH_ENGINE::MovementType::SWAP_REMOVE_1_ADD_2:
             return exploreSwap12NeighborhoodBestImprovement(currentBag, bagSize, packagesOutsideBag, dependencyGraph, maxIterations);
 
-        case MovementType::SWAP_REMOVE_2_ADD_1:
+        case SEARCH_ENGINE::MovementType::SWAP_REMOVE_2_ADD_1:
             return exploreSwap21NeighborhoodBestImprovement(currentBag, bagSize, packagesOutsideBag, dependencyGraph, maxIterations);
         
-        case MovementType::EJECTION_CHAIN:
+        case SEARCH_ENGINE::MovementType::EJECTION_CHAIN:
             return exploreEjectionChainNeighborhoodBestImprovement(currentBag, bagSize, packagesOutsideBag, dependencyGraph, maxIterations);
     }
     return false;

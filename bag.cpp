@@ -10,14 +10,14 @@
 // Constructors and Standard Methods
 // =====================================================================================
 
-Bag::Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp)
+Bag::Bag(ALGORITHM::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp)
     : m_bagAlgorithm(bagAlgorithm), m_timeStamp(timestamp), m_size(0), m_benefit(0),
-      m_algorithmTimeSeconds(0.0), m_localSearch(Algorithm::LOCAL_SEARCH::NONE) {}
+      m_algorithmTimeSeconds(0.0), m_localSearch(ALGORITHM::LOCAL_SEARCH::NONE) {}
 
 Bag::Bag(const std::vector<Package*>& packages,
          const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
-    : m_bagAlgorithm(Algorithm::ALGORITHM_TYPE::NONE), m_size(0), m_benefit(0),
-      m_algorithmTimeSeconds(0.0), m_localSearch(Algorithm::LOCAL_SEARCH::NONE) {
+    : m_bagAlgorithm(ALGORITHM::ALGORITHM_TYPE::NONE), m_size(0), m_benefit(0),
+      m_algorithmTimeSeconds(0.0), m_localSearch(ALGORITHM::LOCAL_SEARCH::NONE) {
     for (const Package* pkg : packages) {
         if (pkg) {
             auto it = dependencyGraph.find(pkg);
@@ -40,7 +40,7 @@ int Bag::getBenefit() const { return m_benefit; }
  * @brief Gets the algorithm type used to create the bag.
  * @return The algorithm type.
  */
-Algorithm::ALGORITHM_TYPE Bag::getBagAlgorithm() const {
+ALGORITHM::ALGORITHM_TYPE Bag::getBagAlgorithm() const {
     return m_bagAlgorithm;
 }
 
@@ -48,11 +48,11 @@ Algorithm::ALGORITHM_TYPE Bag::getBagAlgorithm() const {
  * @brief Gets the local search method applied to the bag.
  * @return The local search type.
  */
-Algorithm::LOCAL_SEARCH Bag::getBagLocalSearch() const {
+ALGORITHM::LOCAL_SEARCH Bag::getBagLocalSearch() const {
     return m_localSearch;
 }
 
-SearchEngine::MovementType Bag::getMovementType() const
+SEARCH_ENGINE::MovementType Bag::getMovementType() const
 {
     return m_movementType;
 }
@@ -107,7 +107,7 @@ std::string Bag::getMetaheuristicParameters() const {
     return m_metaheuristicParams;
 }
 
-SolutionRepair::FeasibilityStrategy Bag::getFeasibilityStrategy() const
+SOLUTION_REPAIR::FEASIBILITY_STRATEGY Bag::getFeasibilityStrategy() const
 {
     return m_feasibilityStrategy;
 }
@@ -225,7 +225,7 @@ void Bag::setAlgorithmTime(double seconds) {
  * @brief Sets the local search method used.
  * @param localSearch The local search type.
  */
-void Bag::setLocalSearch(Algorithm::LOCAL_SEARCH localSearch) {
+void Bag::setLocalSearch(ALGORITHM::LOCAL_SEARCH localSearch) {
     m_localSearch = localSearch;
 }
 
@@ -233,11 +233,11 @@ void Bag::setLocalSearch(Algorithm::LOCAL_SEARCH localSearch) {
  * @brief Sets the main algorithm type used.
  * @param bagAlgorithm The algorithm type.
  */
-void Bag::setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm) {
+void Bag::setBagAlgorithm(ALGORITHM::ALGORITHM_TYPE bagAlgorithm) {
     m_bagAlgorithm = bagAlgorithm;
 }
 
-void Bag::setMovementType(SearchEngine::MovementType movementType)
+void Bag::setMovementType(SEARCH_ENGINE::MovementType movementType)
 {
     m_movementType = movementType;
 }
@@ -250,7 +250,7 @@ void Bag::setMetaheuristicParameters(const std::string& params) {
     m_metaheuristicParams = params;
 }
 
-void Bag::setFeasibilityStrategy(SolutionRepair::FeasibilityStrategy feasibilityStrategy)
+void Bag::setFeasibilityStrategy(SOLUTION_REPAIR::FEASIBILITY_STRATEGY feasibilityStrategy)
 {
     m_feasibilityStrategy = feasibilityStrategy;
 }
@@ -392,10 +392,9 @@ std::vector<const Package*> Bag::getInvalidPackages(
 // Utility Methods
 // =====================================================================================
 std::string Bag::toString() const {
-    ///Algorithm algoHelper(0,0);
     std::string bagString;
 
-    //bagString += "Algorithm: " + algoHelper.toString(m_bagAlgorithm) + " | " + algoHelper.toString(m_localSearch) + "\n";
+    bagString += "Algorithm: " + ALGORITHM::toString(m_bagAlgorithm) + " | " + ALGORITHM::toString(m_localSearch) + "\n";
     bagString += "Bag size: " + std::to_string(m_size) + "\n";
     bagString += "Total Benefit: " + std::to_string(m_benefit) + "\n"; // Added benefit
     bagString += "Execution Time: " + std::to_string(m_algorithmTimeSeconds) + "s\n";
@@ -408,41 +407,3 @@ std::string Bag::toString() const {
     }
     return bagString;
 }
-
-std::string Bag::toString(SearchEngine::MovementType movement) const
-{
-    switch (movement)
-    {
-    case SearchEngine::MovementType::ADD:
-        return "ADD";
-    case SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1:
-        return "SWAP_REMOVE_1_ADD_1";
-    case SearchEngine::MovementType::SWAP_REMOVE_1_ADD_2:
-        return "SWAP_REMOVE_1_ADD_2";
-    case SearchEngine::MovementType::SWAP_REMOVE_2_ADD_1:
-        return "SWAP_REMOVE_2_ADD_1";
-    default:
-    return "EJECTION_CHAIN";
-    }
-}
-
-std::string Bag::toString(SolutionRepair::FeasibilityStrategy feasibilityStrategy) const
-{
-    switch (feasibilityStrategy)
-    {
-    case SolutionRepair::FeasibilityStrategy::SMART:
-        return "SMART";
-    case SolutionRepair::FeasibilityStrategy::TEMPERATURE_BIASED:
-        return "TEMPERATURE_BIASED";
-    default:
-    return "PROBABILISTIC_GREEDY";
-    }
-}
-
-    std::vector<SearchEngine::MovementType> movements = {
-        SearchEngine::MovementType::ADD,
-        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1,
-        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_2,
-        SearchEngine::MovementType::SWAP_REMOVE_2_ADD_1,
-        SearchEngine::MovementType::EJECTION_CHAIN
-    };

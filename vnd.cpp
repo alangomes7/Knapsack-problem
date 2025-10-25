@@ -14,19 +14,19 @@ std::unique_ptr<Bag> VND::run(int bagSize, const Bag* initialBag,
                               const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
 {
     if (!initialBag) {
-        return std::make_unique<Bag>(Algorithm::ALGORITHM_TYPE::NONE, "0");
+        return std::make_unique<Bag>(ALGORITHM::ALGORITHM_TYPE::NONE, "0");
     }
 
-    std::vector<SearchEngine::MovementType> movements = {
-        SearchEngine::MovementType::ADD,
-        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_1,
-        SearchEngine::MovementType::SWAP_REMOVE_1_ADD_2,
-        SearchEngine::MovementType::SWAP_REMOVE_2_ADD_1,
-        SearchEngine::MovementType::EJECTION_CHAIN
+    std::vector<SEARCH_ENGINE::MovementType> movements = {
+        SEARCH_ENGINE::MovementType::ADD,
+        SEARCH_ENGINE::MovementType::SWAP_REMOVE_1_ADD_1,
+        SEARCH_ENGINE::MovementType::SWAP_REMOVE_1_ADD_2,
+        SEARCH_ENGINE::MovementType::SWAP_REMOVE_2_ADD_1,
+        SEARCH_ENGINE::MovementType::EJECTION_CHAIN
     };
 
     const int k_max = static_cast<int>(movements.size());
-    Algorithm::LOCAL_SEARCH searchMethod = Algorithm::LOCAL_SEARCH::BEST_IMPROVEMENT;
+    ALGORITHM::LOCAL_SEARCH searchMethod = ALGORITHM::LOCAL_SEARCH::BEST_IMPROVEMENT;
 
     auto bestBag = std::make_unique<Bag>(*initialBag);
     bestBag->setMetaheuristicParameters("k_max=" + std::to_string(k_max));
@@ -56,7 +56,7 @@ std::unique_ptr<Bag> VND::run(int bagSize, const Bag* initialBag,
         );
 
         candidateBag->setMovementType(movements[k]);
-        SolutionRepair::repair(*candidateBag, bagSize, dependencyGraph);
+        SOLUTION_REPAIR::repair(*candidateBag, bagSize, dependencyGraph);
 
         if (candidateBag->getBenefit() > bestBag->getBenefit()) {
             bestBag = std::move(candidateBag);
@@ -68,8 +68,8 @@ std::unique_ptr<Bag> VND::run(int bagSize, const Bag* initialBag,
 
     auto end_time = std::chrono::steady_clock::now();
     bestBag->setAlgorithmTime(std::chrono::duration<double>(end_time - start_time).count());
-    bestBag->setBagAlgorithm(Algorithm::ALGORITHM_TYPE::VND);
-    bestBag->setLocalSearch(Algorithm::LOCAL_SEARCH::NONE);
+    bestBag->setBagAlgorithm(ALGORITHM::ALGORITHM_TYPE::VND);
+    bestBag->setLocalSearch(ALGORITHM::LOCAL_SEARCH::NONE);
 
     return bestBag;
 }

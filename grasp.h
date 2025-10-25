@@ -25,7 +25,7 @@
 struct WorkerContext {
     int bagSize = 0;
     const std::vector<Package*>* allPackages = nullptr;
-    SearchEngine::MovementType moveType{};
+    SEARCH_ENGINE::MovementType moveType{};
     const std::unordered_map<const Package*, std::vector<const Dependency*>>* dependencyGraph = nullptr;
     int maxLS_IterationsWithoutImprovement = 0;
     int max_Iterations = 0;
@@ -41,7 +41,7 @@ public:
     std::unique_ptr<Bag> run(
         int bagSize,
         const std::vector<Package*>& allPackages,
-        SearchEngine::MovementType moveType,
+        SEARCH_ENGINE::MovementType moveType,
         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
         int maxLS_IterationsWithoutImprovement,
         int max_Iterations);
@@ -63,8 +63,8 @@ private:
         Bag& bag,
         int bagSize,
         const std::vector<Package*>& allPackages,
-        SearchEngine::MovementType moveType,
-        Algorithm::LOCAL_SEARCH localSearchMethod,
+        SEARCH_ENGINE::MovementType moveType,
+        ALGORITHM::LOCAL_SEARCH localSearchMethod,
         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
         int maxLS_IterationsWithoutImprovement,
         int maxLS_Iterations,

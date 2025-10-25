@@ -14,16 +14,10 @@ class Bag;
 class Package;
 class Dependency;
 
-/**
- * @brief Implements various local search and metaheuristic components.
- */
-class SearchEngine {
-public:
-    explicit SearchEngine(unsigned int seed = 0);
-
+namespace SEARCH_ENGINE {
     /**
      * @brief Defines the types of moves the local search can perform.
-     */
+    */
     enum class MovementType {
         ADD,
         SWAP_REMOVE_1_ADD_1,
@@ -32,10 +26,20 @@ public:
         EJECTION_CHAIN,
     };
 
+    std::string toString(MovementType movement);
+}
+
+/**
+ * @brief Implements various local search and metaheuristic components.
+ */
+class SearchEngine {
+public:
+    explicit SearchEngine(unsigned int seed = 0);
+
     // --- Public Metaheuristic Methods ---
     void localSearch(Bag& currentBag, int bagSize, const std::vector<Package*>& allPackages,
-                     const SearchEngine::MovementType& moveType,
-                     Algorithm::LOCAL_SEARCH localSearchMethod,
+                     const SEARCH_ENGINE::MovementType& moveType,
+                     ALGORITHM::LOCAL_SEARCH localSearchMethod,
                      const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
                      int maxIterationsWithoutImprovement, int maxIterations, const std::chrono::time_point<std::chrono::steady_clock>& deadline);
     int getSeed() const;
@@ -43,9 +47,9 @@ public:
 
 private:
     // --- Core Private Logic ---
-    bool applyMovement(MovementType move, Bag& currentBag, int bagSize,
+    bool applyMovement(const SEARCH_ENGINE::MovementType& move, Bag& currentBag, int bagSize,
         const std::vector<Package*>& packagesOutsideBag,
-        Algorithm::LOCAL_SEARCH localSearchMethod,
+        ALGORITHM::LOCAL_SEARCH localSearchMethod,
         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
         int maxIterations);
 

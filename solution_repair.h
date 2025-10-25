@@ -9,16 +9,15 @@
 class Bag;
 class Package;
 class Dependency;
-// Removed 'class RandomProvider;' as it's a namespace
 
 /**
  * @brief Namespace that provides a function to repair an infeasible solution.
  *
- * You just call `SolutionRepair::run(...)` passing all necessary parameters.
+ * You just call `SOLUTIONREPAIR::run(...)` passing all necessary parameters.
  */
-namespace SolutionRepair {
+namespace SOLUTION_REPAIR {
 
-enum class FeasibilityStrategy {
+enum class FEASIBILITY_STRATEGY {
     SMART,
     TEMPERATURE_BIASED,
     PROBABILISTIC_GREEDY,
@@ -37,6 +36,8 @@ bool repair(
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph
 );
 
-} // namespace SolutionRepair
+std::string toString(FEASIBILITY_STRATEGY feasibilityStrategy);
+
+} // namespace SOLUTIONREPAIR
 
 #endif // SOLUTION_REPAIR_H

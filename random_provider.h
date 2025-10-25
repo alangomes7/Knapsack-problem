@@ -11,7 +11,7 @@
  * For reproducible results, call `initialize(seed)` once at the
  * start of your program.
  */
-namespace RandomProvider {
+namespace RANDOM_PROVIDER {
 
     /**
      * @brief Initializes (or re-initializes) the global random number generator.
@@ -61,6 +61,6 @@ namespace RandomProvider {
      */
     std::mt19937& getGenerator();
 
-} // namespace RandomProvider
+} // namespace RANDOM_PROVIDER
 
 #endif // RANDOM_PROVIDER_H

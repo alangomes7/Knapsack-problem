@@ -9,7 +9,7 @@
 #include <limits>
 #include <cmath>
 
-namespace SolutionRepair {
+namespace SOLUTION_REPAIR {
 
 // --- Internal helpers (anonymous namespace) ---
 namespace {
@@ -70,7 +70,7 @@ bool probabilisticGreedyRemoval(
     Bag& bag,
     int maxCapacity,
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph
-    // Removed 'RandomProvider& random'
+    // Removed 'RANDOM_PROVIDER& random'
 )
 {
     const auto& pkgs = bag.getPackages();
@@ -85,8 +85,7 @@ bool probabilisticGreedyRemoval(
     double total = 0.0;
     for (auto& [p, s] : scored) total += s;
 
-    // Use namespace syntax
-    double r = RandomProvider::getDouble(0.0, total);
+    double r = RANDOM_PROVIDER::getDouble(0.0, total);
 
     double acc = 0.0;
     const Package* selected = nullptr;
@@ -110,7 +109,7 @@ bool temperatureBiasedRemoval(
     Bag& bag,
     int maxCapacity,
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph
-    // Removed 'RandomProvider& random'
+    // Removed 'RANDOM_PROVIDER& random'
 )
 {
     double temperature = std::max(1.0, std::sqrt(bag.getSize() - maxCapacity));
@@ -122,11 +121,9 @@ bool temperatureBiasedRemoval(
 
     for (auto* pkg : pkgs) {
         double eff = computeEfficiency(pkg);
-        // Use namespace syntax
-        double noise = RandomProvider::getDouble(0.8, 1.2);
+        double noise = RANDOM_PROVIDER::getDouble(0.8, 1.2);
         double score = eff * noise * (1.0 + temperature * 0.05);
-        // Use namespace syntax
-        if (score < bestScore || RandomProvider::getDouble(0.0, 1.0) < std::exp(-score / temperature)) {
+        if (score < bestScore || RANDOM_PROVIDER::getDouble(0.0, 1.0) < std::exp(-score / temperature)) {
             bestScore = score;
             chosen = pkg;
         }
@@ -145,19 +142,16 @@ bool removeOnePackageWithStrategy(
     Bag& bag,
     int maxCapacity,
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
-    FeasibilityStrategy strategy
-    // Removed 'RandomProvider& random'
+    FEASIBILITY_STRATEGY strategy
 )
 {
     bag.setFeasibilityStrategy(strategy);
     switch (strategy) {
-        case FeasibilityStrategy::SMART:
+        case FEASIBILITY_STRATEGY::SMART:
             return smartRemoval(bag, maxCapacity, dependencyGraph);
-        case FeasibilityStrategy::TEMPERATURE_BIASED:
-            // Removed 'random' from call
+        case FEASIBILITY_STRATEGY::TEMPERATURE_BIASED:
             return temperatureBiasedRemoval(bag, maxCapacity, dependencyGraph);
-        case FeasibilityStrategy::PROBABILISTIC_GREEDY:
-            // Removed 'random' from call
+        case FEASIBILITY_STRATEGY::PROBABILISTIC_GREEDY:
             return probabilisticGreedyRemoval(bag, maxCapacity, dependencyGraph);
     }
     return false;
@@ -170,18 +164,18 @@ bool repair(
     Bag& bag,
     int maxCapacity,
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph
-    // Removed 'RandomProvider& random'
+    // Removed 'RANDOM_PROVIDER& random'
 )
 {
     if (bag.getSize() <= maxCapacity)
         return true;
 
-    std::vector<std::pair<FeasibilityStrategy, Bag>> results;
+    std::vector<std::pair<FEASIBILITY_STRATEGY, Bag>> results;
     results.reserve(3);
 
-    for (FeasibilityStrategy strat : { FeasibilityStrategy::SMART,
-                                       FeasibilityStrategy::TEMPERATURE_BIASED,
-                                       FeasibilityStrategy::PROBABILISTIC_GREEDY })
+    for (FEASIBILITY_STRATEGY strat : { FEASIBILITY_STRATEGY::SMART,
+                                       FEASIBILITY_STRATEGY::TEMPERATURE_BIASED,
+                                       FEASIBILITY_STRATEGY::PROBABILISTIC_GREEDY })
     {
         Bag testBag = bag;
         while (testBag.getSize() > maxCapacity) {
@@ -196,9 +190,9 @@ bool repair(
     if (results.empty()) {
         // fallback: choose smallest infeasible
         Bag best = bag;
-        for (FeasibilityStrategy strat : { FeasibilityStrategy::SMART,
-                                           FeasibilityStrategy::TEMPERATURE_BIASED,
-                                           FeasibilityStrategy::PROBABILISTIC_GREEDY })
+        for (FEASIBILITY_STRATEGY strat : { FEASIBILITY_STRATEGY::SMART,
+                                            FEASIBILITY_STRATEGY::TEMPERATURE_BIASED,
+                                            FEASIBILITY_STRATEGY::PROBABILISTIC_GREEDY })
         {
             Bag testBag = bag;
             while (testBag.getSize() > maxCapacity) {
@@ -219,4 +213,16 @@ bool repair(
     return true;
 }
 
+std::string toString(FEASIBILITY_STRATEGY feasibilityStrategy)
+{
+    switch (feasibilityStrategy)
+    {
+    case FEASIBILITY_STRATEGY::SMART:
+        return "SMART";
+    case FEASIBILITY_STRATEGY::TEMPERATURE_BIASED:
+        return "TEMPERATURE_BIASED";
+    default:
+        return "PROBABILISTIC_GREEDY";
+    }
+}
 }

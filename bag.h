@@ -16,7 +16,7 @@ class Algorithm;
 class Bag {
 public:
     // --- Constructors ---
-    explicit Bag(Algorithm::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp);
+    explicit Bag(ALGORITHM::ALGORITHM_TYPE bagAlgorithm, const std::string& timestamp);
     explicit Bag(const std::vector<Package*>& packages,
                  const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph);
 
@@ -27,23 +27,23 @@ public:
 
     int getSize() const;
     int getBenefit() const;
-    Algorithm::ALGORITHM_TYPE getBagAlgorithm() const;
-    Algorithm::LOCAL_SEARCH getBagLocalSearch() const;
-    SearchEngine::MovementType getMovementType() const;
+    ALGORITHM::ALGORITHM_TYPE getBagAlgorithm() const;
+    ALGORITHM::LOCAL_SEARCH getBagLocalSearch() const;
+    SEARCH_ENGINE::MovementType getMovementType() const;
     double getAlgorithmTime() const;
     std::string getAlgorithmTimeString() const;
     std::string getTimestamp() const;
     std::string getMetaheuristicParameters() const;
-    SolutionRepair::FeasibilityStrategy getFeasibilityStrategy() const;
+    SOLUTION_REPAIR::FEASIBILITY_STRATEGY getFeasibilityStrategy() const;
 
     // --- Setters ---
     void setTimestamp(const std::string& timestamp);
     void setAlgorithmTime(double seconds);
-    void setLocalSearch(Algorithm::LOCAL_SEARCH localSearch);
-    void setBagAlgorithm(Algorithm::ALGORITHM_TYPE bagAlgorithm);
-    void setMovementType(SearchEngine::MovementType movementType);
+    void setLocalSearch(ALGORITHM::LOCAL_SEARCH localSearch);
+    void setBagAlgorithm(ALGORITHM::ALGORITHM_TYPE bagAlgorithm);
+    void setMovementType(SEARCH_ENGINE::MovementType movementType);
     void setMetaheuristicParameters(const std::string& params);
-    void setFeasibilityStrategy(SolutionRepair::FeasibilityStrategy feasibilityStrategy);
+    void setFeasibilityStrategy(SOLUTION_REPAIR::FEASIBILITY_STRATEGY feasibilityStrategy);
 
     // --- Core Bag Operations ---
     bool addPackage(const Package& package, const std::vector<const Dependency*>& dependencies);
@@ -85,15 +85,11 @@ public:
     // --- Utility ---
     std::string toString() const;
 
-    std::string toString(SearchEngine::MovementType movement) const;
-
-    std::string toString(SolutionRepair::FeasibilityStrategy feasibilityStrategy) const;
-
 private:
-    Algorithm::ALGORITHM_TYPE m_bagAlgorithm;
-    Algorithm::LOCAL_SEARCH m_localSearch;
-    SearchEngine::MovementType m_movementType;
-    SolutionRepair::FeasibilityStrategy m_feasibilityStrategy;
+    ALGORITHM::ALGORITHM_TYPE m_bagAlgorithm;
+    ALGORITHM::LOCAL_SEARCH m_localSearch;
+    SEARCH_ENGINE::MovementType m_movementType;
+    SOLUTION_REPAIR::FEASIBILITY_STRATEGY m_feasibilityStrategy;
     std::string m_timeStamp = "0000-00-00 00:00:00";
     int m_size;
     int m_benefit;

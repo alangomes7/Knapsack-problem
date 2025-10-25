@@ -23,7 +23,7 @@ GRASP_VNS::GRASP_VNS(double maxTime, unsigned int seed, int rclSize, double alph
 std::unique_ptr<Bag> GRASP_VNS::run(
     int bagSize,
     const std::vector<Package*>& allPackages,
-    SearchEngine::MovementType moveType,
+    SEARCH_ENGINE::MovementType moveType,
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
     int maxLS_IterationsWithoutImprovement,
     int max_Iterations)
@@ -31,12 +31,12 @@ std::unique_ptr<Bag> GRASP_VNS::run(
     // ... (Setup code is identical to original grasp.cpp) ...
     
     if (allPackages.empty()) {
-        return std::make_unique<Bag>(Algorithm::ALGORITHM_TYPE::NONE, "0");
+        return std::make_unique<Bag>(ALGORITHM::ALGORITHM_TYPE::NONE, "0");
     }
     auto start_time = std::chrono::steady_clock::now();
     auto deadline = start_time + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
         std::chrono::duration<double>(m_maxTime));
-    std::unique_ptr<Bag> bestBagOverall = std::make_unique<Bag>(Algorithm::ALGORITHM_TYPE::NONE, "0");
+    std::unique_ptr<Bag> bestBagOverall = std::make_unique<Bag>(ALGORITHM::ALGORITHM_TYPE::NONE, "0");
     std::mutex bestBagMutex;
     unsigned int hw = std::thread::hardware_concurrency();
     unsigned int numThreads = hw == 0 ? 1u : hw;
@@ -68,8 +68,8 @@ std::unique_ptr<Bag> GRASP_VNS::run(
     auto end_time = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     bestBagOverall->setAlgorithmTime(elapsed_seconds.count());
-    bestBagOverall->setBagAlgorithm(Algorithm::ALGORITHM_TYPE::GRASP_VNS); 
-    bestBagOverall->setLocalSearch(Algorithm::LOCAL_SEARCH::NONE);
+    bestBagOverall->setBagAlgorithm(ALGORITHM::ALGORITHM_TYPE::GRASP_VNS); 
+    bestBagOverall->setLocalSearch(ALGORITHM::LOCAL_SEARCH::NONE);
     bestBagOverall->setMovementType(moveType);
     bestBagOverall->setMetaheuristicParameters(
         "Alpha: " + std::to_string(m_alpha_random) +
@@ -107,7 +107,7 @@ void GRASP_VNS::graspWorker(WorkerContext ctx) {
         ++localIterations;
 
         // 1. GRASP Construction Phase (fast construction)
-        std::unique_ptr<Bag> currentBag = GraspHelper::constructionPhaseFast(
+        std::unique_ptr<Bag> currentBag = GRASP_HELPER::constructionPhaseFast(
             ctx.bagSize, *ctx.allPackages, *ctx.dependencyGraph,
             localEngine,
             candidateScoresBuffer,
@@ -131,14 +131,14 @@ void GRASP_VNS::graspWorker(WorkerContext ctx) {
             // Only run VNS if we still have enough time left
             if (remainingSeconds >= minRemainingTimeForVNS) {
                 // Call VNS intensification (existing heavy routine)
-                VnsHelper::vnsLoop(
+                VNS_HELPER::vnsLoop(
                     *currentBag,
                     ctx.bagSize,
                     *ctx.allPackages,
                     *ctx.dependencyGraph,
                     localEngine,
-                    ctx.maxLS_IterationsWithoutImprovement,
-                    ctx.max_Iterations,
+                    ctx.maxLS_IterationsWithoutImprovement / 2,
+                    ctx.max_Iterations / 4,
                     ctx.deadline
                 );
             } else {

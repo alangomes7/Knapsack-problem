@@ -16,7 +16,7 @@ std::unique_ptr<Bag> VNS::run(
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
 {
     if (!initialBag) 
-        return std::make_unique<Bag>(Algorithm::ALGORITHM_TYPE::NONE, "0");
+        return std::make_unique<Bag>(ALGORITHM::ALGORITHM_TYPE::NONE, "0");
 
     auto start_time = std::chrono::steady_clock::now();
     auto deadline = start_time +
@@ -38,7 +38,7 @@ std::unique_ptr<Bag> VNS::run(
         // Sequential evaluation of neighborhoods
         for (int k = 1; k <= k_max; ++k) {
             auto candidate = std::make_unique<Bag>(*bestBag);
-            VnsHelper::vnsLoop(*candidate, bagSize, allPackages, dependencyGraph,
+            VNS_HELPER::vnsLoop(*candidate, bagSize, allPackages, dependencyGraph,
                                 localEngine, 1, 1, deadline, false);
 
             if (candidate->getBenefit() > bestBag->getBenefit()) {
@@ -53,8 +53,8 @@ std::unique_ptr<Bag> VNS::run(
 
     auto end_time = std::chrono::steady_clock::now();
     bestBag->setAlgorithmTime(std::chrono::duration<double>(end_time - start_time).count());
-    bestBag->setBagAlgorithm(Algorithm::ALGORITHM_TYPE::VNS);
-    bestBag->setLocalSearch(Algorithm::LOCAL_SEARCH::NONE);
+    bestBag->setBagAlgorithm(ALGORITHM::ALGORITHM_TYPE::VNS);
+    bestBag->setLocalSearch(ALGORITHM::LOCAL_SEARCH::NONE);
     bestBag->setMetaheuristicParameters("k_max=" + std::to_string(k_max));
 
     return bestBag;

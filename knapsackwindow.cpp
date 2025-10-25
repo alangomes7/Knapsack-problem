@@ -12,7 +12,7 @@
 #include <QtConcurrent>
 #include <QLineEdit>
 
-#include "fileprocessor.h"
+#include "file_processor.h"
 #include "algorithm.h"
 #include "bag.h"
 
@@ -52,7 +52,7 @@ void knapsackWindow::on_pushButton_problem_clicked()
         );
 
         if (!problemFile.isEmpty()) {
-            m_problemInstance = FileProcessor::loadProblem(problemFile.toStdString());
+            m_problemInstance = FILE_PROCESSOR::loadProblem(problemFile.toStdString());
             QString problemPrint = QString::fromStdString(m_problemInstance.toString());
             ui->plainTextEdit_problem->setPlainText(problemPrint);
             ui->pushButton_problem->setText(problemFile);
@@ -111,13 +111,7 @@ void knapsackWindow::on_pushButton_findBag_clicked()
         };
 
         // --- Algorithm setup ---
-        Algorithm algorithm(
-            maxExecutionTime - 1,
-            seed,
-            folderPath.toStdString(),
-            fileName.toStdString(),
-            timestamp
-        );
+        Algorithm algorithm(maxExecutionTime - 1, seed);
 
         int completed = 0; 
         std::chrono::milliseconds firstExecutionTime(0);
@@ -148,6 +142,8 @@ void knapsackWindow::on_pushButton_findBag_clicked()
                     ui->timeEdit_estimatedTotalTime->setTime(estimated);
                 }, Qt::QueuedConnection);
             }
+
+            FILE_PROCESSOR::saveData(resultBags, folderPath.toStdString(), fileName.toStdString(), timestamp);
 
             // --- Update progress ---
             int progressValue = static_cast<int>(

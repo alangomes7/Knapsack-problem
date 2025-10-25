@@ -30,7 +30,7 @@ private:
     // Return std::unique_ptr
     std::unique_ptr<Bag> fillBagWithStrategy(int bagSize, std::vector<Package*>& packages,
                                  std::function<Package*(std::vector<Package*>&)> pickStrategy,
-                                 Algorithm::ALGORITHM_TYPE type);
+                                 ALGORITHM::ALGORITHM_TYPE type);
 
     std::vector<Package*> sortedPackagesByBenefit(const std::vector<Package*>& packages);
     std::vector<Package*> sortedPackagesByBenefitToSizeRatio(const std::vector<Package*>& packages);

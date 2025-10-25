@@ -21,7 +21,7 @@ std::unique_ptr<Bag> ConstructiveSolutions::randomBag(int bagSize, const std::ve
     auto pickStrategy = [&](std::vector<Package*>& pkgs) {
         return this->pickRandomPackage(pkgs);
     };
-    return fillBagWithStrategy(bagSize, mutablePackages, pickStrategy, Algorithm::ALGORITHM_TYPE::RANDOM);
+    return fillBagWithStrategy(bagSize, mutablePackages, pickStrategy, ALGORITHM::ALGORITHM_TYPE::RANDOM);
 }
 
 // Return std::vector<std::unique_ptr<Bag>>
@@ -40,9 +40,9 @@ std::vector<std::unique_ptr<Bag>> ConstructiveSolutions::greedyBag(int bagSize, 
     };
 
     // fillBagWithStrategy returns a unique_ptr, which is moved into the vector
-    bags.push_back(fillBagWithStrategy(bagSize, sortedByBenefit, pickStrategy, Algorithm::ALGORITHM_TYPE::GREEDY_PACKAGE_BENEFIT));
-    bags.push_back(fillBagWithStrategy(bagSize, sortedByRatio, pickStrategy, Algorithm::ALGORITHM_TYPE::GREEDY_PACKAGE_BENEFIT_RATIO));
-    bags.push_back(fillBagWithStrategy(bagSize, sortedBySize, pickStrategy, Algorithm::ALGORITHM_TYPE::GREEDY_PACKAGE_SIZE));
+    bags.push_back(fillBagWithStrategy(bagSize, sortedByBenefit, pickStrategy, ALGORITHM::ALGORITHM_TYPE::GREEDY_PACKAGE_BENEFIT));
+    bags.push_back(fillBagWithStrategy(bagSize, sortedByRatio, pickStrategy, ALGORITHM::ALGORITHM_TYPE::GREEDY_PACKAGE_BENEFIT_RATIO));
+    bags.push_back(fillBagWithStrategy(bagSize, sortedBySize, pickStrategy, ALGORITHM::ALGORITHM_TYPE::GREEDY_PACKAGE_SIZE));
     return bags;
 }
 
@@ -63,9 +63,9 @@ std::vector<std::unique_ptr<Bag>> ConstructiveSolutions::randomGreedy(int bagSiz
     };
 
     // fillBagWithStrategy returns a unique_ptr, which is moved into the vector
-    bags.push_back(fillBagWithStrategy(bagSize, sortedByBenefit, pickStrategy, Algorithm::ALGORITHM_TYPE::GREEDY_PACKAGE_BENEFIT));
-    bags.push_back(fillBagWithStrategy(bagSize, sortedByRatio, pickStrategy, Algorithm::ALGORITHM_TYPE::GREEDY_PACKAGE_BENEFIT_RATIO));
-    bags.push_back(fillBagWithStrategy(bagSize, sortedBySize, pickStrategy, Algorithm::ALGORITHM_TYPE::RANDOM_GREEDY_PACKAGE_SIZE));
+    bags.push_back(fillBagWithStrategy(bagSize, sortedByBenefit, pickStrategy, ALGORITHM::ALGORITHM_TYPE::GREEDY_PACKAGE_BENEFIT));
+    bags.push_back(fillBagWithStrategy(bagSize, sortedByRatio, pickStrategy, ALGORITHM::ALGORITHM_TYPE::GREEDY_PACKAGE_BENEFIT_RATIO));
+    bags.push_back(fillBagWithStrategy(bagSize, sortedBySize, pickStrategy, ALGORITHM::ALGORITHM_TYPE::RANDOM_GREEDY_PACKAGE_SIZE));
     return bags;
 }
 
@@ -73,8 +73,8 @@ Package* ConstructiveSolutions::pickRandomPackage(std::vector<Package*>& package
     if (packageList.empty()) {
         return nullptr;
     }
-    // Note: RandomProvider::getInt is inclusive, so (0, size - 1) is correct
-    int index = RandomProvider::getInt(0, packageList.size() - 1);
+    // Note: RANDOM_PROVIDER::getInt is inclusive, so (0, size - 1) is correct
+    int index = RANDOM_PROVIDER::getInt(0, packageList.size() - 1);
     Package* pickedPackage = packageList[index];
     packageList.erase(packageList.begin() + index);
     return pickedPackage;
@@ -99,7 +99,7 @@ Package* ConstructiveSolutions::pickSemiRandomPackage(std::vector<Package*>& pac
     if (candidatePoolSize <= 0) {
         return nullptr;
     }
-    int index = RandomProvider::getInt(0, candidatePoolSize - 1);
+    int index = RANDOM_PROVIDER::getInt(0, candidatePoolSize - 1);
     Package* pickedPackage = packageList[index];
     packageList.erase(packageList.begin() + index);
     return pickedPackage;
@@ -135,7 +135,7 @@ std::vector<Package*> ConstructiveSolutions::sortedPackagesBySize(const std::vec
 // Return std::unique_ptr<Bag>
 std::unique_ptr<Bag> ConstructiveSolutions::fillBagWithStrategy(int bagSize, std::vector<Package*>& packages,
                                       std::function<Package*(std::vector<Package*>&)> pickStrategy,
-                                      Algorithm::ALGORITHM_TYPE type) {
+                                      ALGORITHM::ALGORITHM_TYPE type) {
     // Use std::make_unique to create the Bag
     auto bag = std::make_unique<Bag>(type, m_timestamp);
     if (packages.empty()) {
@@ -163,7 +163,7 @@ std::unique_ptr<Bag> ConstructiveSolutions::fillBagWithStrategy(int bagSize, std
     }
     
     // Pass the dereferenced unique_ptr (*bag)
-    SolutionRepair::repair(*bag, bagSize, m_dependencyGraph);
+    SOLUTION_REPAIR::repair(*bag, bagSize, m_dependencyGraph);
 
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
