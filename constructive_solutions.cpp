@@ -168,7 +168,7 @@ std::unique_ptr<Bag> ConstructiveSolutions::fillBagWithStrategy(int bagSize, std
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     
     bag->setAlgorithmTime(elapsed_seconds.count());
-    return bag; // Return the std::unique_ptr
+    return bag;
 }
 
 // FIX: Added inBagCache parameter and logic

@@ -49,10 +49,11 @@ struct ProblemInstance {
 
     [[nodiscard]] std::string toString() const {
         std::ostringstream oss;
-        oss << "Problem Instance:\n"
-            << "↳ max capacity:         " << maxCapacity << " MB\n"
-            << "↳ packages (count):     " << packages.size() << "\n"
-            << "↳ dependencies (count): " << dependencies.size() << "\n";
+        oss << "Problem Instance:{\n"
+            << " max capacity:         " << maxCapacity << " MB\n"
+            << " packages (count):     " << packages.size() << "\n"
+            << " dependencies (count): " << dependencies.size() << "\n"
+            << "}" << dependencies.size() << "\n";
         return oss.str();
     }
 
@@ -119,7 +120,7 @@ struct ValidationResult {
      */
     [[nodiscard]] std::string toString() const {
         std::ostringstream oss;
-        oss << std::boolalpha; // Print 'true'/'false'
+        oss << std::boolalpha;
         oss << "ValidationResult {\n"
             << "  Overall Valid: " << isOverallValid() << "\n"
             << "  --------------------\n"

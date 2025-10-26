@@ -71,11 +71,15 @@ std::unique_ptr<Bag> GRASP_VNS::run(
     bestBagOverall->setBagAlgorithm(ALGORITHM::ALGORITHM_TYPE::GRASP_VNS); 
     bestBagOverall->setLocalSearch(ALGORITHM::LOCAL_SEARCH::NONE);
     bestBagOverall->setMovementType(moveType);
+    auto total_iterations = m_totalIterations.load();
+    auto improvements = m_improvements.load();
+    auto no_improvements = total_iterations - improvements;
     bestBagOverall->setMetaheuristicParameters(
         "Alpha: " + std::to_string(m_alpha_random) +
-        " | VNS Improvements: " + std::to_string(m_improvements.load()) +
-        " | RCL size: " + std::to_string(m_rclSize) +
-        " | Total GRASP iterations: " + std::to_string(m_totalIterations.load())
+        " | Total GRASP iterations: " + std::to_string(total_iterations) +
+        " | Improvements: " + std::to_string(improvements) +
+        " | No improvements: " + std::to_string(no_improvements) +
+        " | RCL size: " + std::to_string(m_rclSize)
     );
     return bestBagOverall;
 }
@@ -148,9 +152,7 @@ void GRASP_VNS::graspWorker(WorkerContext ctx) {
 
         // 3. Check for improvement
         if (currentBag->getBenefit() > localBest->getBenefit()) {
-            if (currentBag->getBenefit() > benefitBeforeVNS) {
-                ++localImprovements;
-            }
+            ++localImprovements;
             localBest = std::move(currentBag);
         }
 

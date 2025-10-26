@@ -46,6 +46,7 @@ const std::unordered_set<const Dependency*>& Bag::getDependencies() const { retu
 const std::unordered_map<const Dependency*, int>& Bag::getDependencyRefCount() const { return m_dependencyRefCount; }
 int Bag::getSize() const { return m_size; }
 int Bag::getBenefit() const { return m_benefit; }
+unsigned int Bag::getSeed() const { return m_seed; };
 ALGORITHM::ALGORITHM_TYPE Bag::getBagAlgorithm() const { return m_bagAlgorithm; }
 ALGORITHM::LOCAL_SEARCH Bag::getBagLocalSearch() const { return m_localSearch; }
 SEARCH_ENGINE::MovementType Bag::getMovementType() const { return m_movementType; }
@@ -75,7 +76,8 @@ std::string Bag::getAlgorithmTimeString() const {
 // Setters
 // =====================================================================================
 
-void Bag::setTimestamp(const std::string& timestamp) { m_timeStamp = timestamp; }
+void Bag::setSeed(unsigned int seed) { m_seed = seed; }
+void Bag::setTimestamp(const std::string &timestamp) { m_timeStamp = timestamp; }
 void Bag::setAlgorithmTime(double seconds) { m_algorithmTimeSeconds = seconds; }
 void Bag::setLocalSearch(ALGORITHM::LOCAL_SEARCH localSearch) { m_localSearch = localSearch; }
 void Bag::setBagAlgorithm(ALGORITHM::ALGORITHM_TYPE bagAlgorithm) { m_bagAlgorithm = bagAlgorithm; }

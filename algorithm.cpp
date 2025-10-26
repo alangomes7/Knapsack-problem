@@ -50,7 +50,7 @@ std::string toString(LOCAL_SEARCH localSearch)
         case LOCAL_SEARCH::FIRST_IMPROVEMENT: return "First Improvement";
         case LOCAL_SEARCH::BEST_IMPROVEMENT: return "Best Improvement";
         case LOCAL_SEARCH::RANDOM_IMPROVEMENT: return "Random Improvement";
-        case LOCAL_SEARCH::NONE: return "None";
+        case LOCAL_SEARCH::NONE: return "NONE";
         default: return "VNS";
     }
 }
@@ -61,7 +61,7 @@ std::string toString(LOCAL_SEARCH localSearch)
 // == Constructor
 // =============================================================
 Algorithm::Algorithm(double maxTime, unsigned int seed)
-    : m_maxTime(maxTime), m_generator(seed)
+    : m_maxTime(maxTime), m_generator(seed), m_seed(seed)
 {
 }
 
@@ -98,7 +98,10 @@ std::vector<std::unique_ptr<Bag>> Algorithm::run(const ProblemInstance& problemI
     for (auto& bag : constructiveSolutions.randomGreedy(problemInstance.maxCapacity, problemInstance.packages))
         resultBag.push_back(std::move(bag));
 
-    for (auto& bag : resultBag) updateBestBag(bag);
+    for (auto& bag : resultBag){
+        updateBestBag(bag);
+        bag->setSeed(m_seed);
+    }
 
     if (!bestInitialBag && !resultBag.empty())
         bestInitialBag = std::make_shared<Bag>(*resultBag.front());
@@ -110,7 +113,6 @@ std::vector<std::unique_ptr<Bag>> Algorithm::run(const ProblemInstance& problemI
         SEARCH_ENGINE::MovementType::SWAP_REMOVE_2_ADD_1,
         SEARCH_ENGINE::MovementType::EJECTION_CHAIN
     };
-    int maxGraspIterations = 100;
 
     // === Improvement Phase (Sequential VND + VNS) ===
     {
@@ -128,6 +130,7 @@ std::vector<std::unique_ptr<Bag>> Algorithm::run(const ProblemInstance& problemI
     }
 
     // === GRASP & GRASP_VNS Sequential (Single Loop) ===
+    int maxGraspIterations = 100;
     using GraspType = std::unique_ptr<Bag>(*)(double, std::mt19937&, int, int);
     for (auto move : moves) {
         // GRASP
@@ -147,6 +150,10 @@ std::vector<std::unique_ptr<Bag>> Algorithm::run(const ProblemInstance& problemI
             updateBestBag(bagGraspVNS);
             resultBag.push_back(std::move(bagGraspVNS));
         }
+    }
+
+    for (auto& bag : resultBag){
+        bag->setSeed(m_seed);
     }
 
     return resultBag;

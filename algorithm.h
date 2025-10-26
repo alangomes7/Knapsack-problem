@@ -65,6 +65,7 @@ private:
                                    const std::vector<Dependency*>& dependencies);
 
     const double m_maxTime;
+    unsigned int m_seed;
     std::mt19937 m_generator;
     std::string m_timestamp;
     std::unordered_map<const Package*, std::vector<const Dependency*>> m_dependencyGraph;

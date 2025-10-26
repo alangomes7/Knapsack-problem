@@ -27,6 +27,7 @@ public:
 
     int getSize() const;
     int getBenefit() const;
+    unsigned int getSeed() const;
     ALGORITHM::ALGORITHM_TYPE getBagAlgorithm() const;
     ALGORITHM::LOCAL_SEARCH getBagLocalSearch() const;
     SEARCH_ENGINE::MovementType getMovementType() const;
@@ -37,6 +38,7 @@ public:
     SOLUTION_REPAIR::FEASIBILITY_STRATEGY getFeasibilityStrategy() const;
 
     // --- Setters ---
+    void setSeed(unsigned int seed);
     void setTimestamp(const std::string& timestamp);
     void setAlgorithmTime(double seconds);
     void setLocalSearch(ALGORITHM::LOCAL_SEARCH localSearch);
@@ -76,6 +78,7 @@ private:
     int m_size;
     int m_benefit;
     double m_algorithmTimeSeconds;
+    unsigned int m_seed;
     std::string m_metaheuristicParams;
 
     std::unordered_set<const Package*> m_baggedPackages;

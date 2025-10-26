@@ -63,13 +63,15 @@ std::unique_ptr<Bag> GRASP::run(
     bestBagOverall->setBagAlgorithm(ALGORITHM::ALGORITHM_TYPE::GRASP);
     bestBagOverall->setLocalSearch(ALGORITHM::LOCAL_SEARCH::NONE);
     bestBagOverall->setMovementType(moveType);
-    std::cout << "GRASP completed: " << m_totalIterations.load() << " iterations, "
-              << m_improvements.load() << " improvements" << std::endl;
+    auto total_iterations = m_totalIterations.load();
+    auto improvements = m_improvements.load();
+    auto no_improvements = total_iterations - improvements;
     bestBagOverall->setMetaheuristicParameters(
         "Alpha: " + std::to_string(m_alpha_random) +
-        " | Improvements: " + std::to_string(m_improvements.load()) +
-        " | RCL size: " + std::to_string(m_rclSize) +
-        " | Total iterations: " + std::to_string(m_totalIterations.load())
+        " | Total GRASP iterations: " + std::to_string(total_iterations) +
+        " | Improvements: " + std::to_string(improvements) +
+        " | No improvements: " + std::to_string(no_improvements) +
+        " | RCL size: " + std::to_string(m_rclSize)
     );
     return bestBagOverall;
 }

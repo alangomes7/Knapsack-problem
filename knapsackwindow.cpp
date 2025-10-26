@@ -94,7 +94,7 @@ void knapsackWindow::on_pushButton_findBag_clicked()
     ProblemInstance problemCopy = m_problemInstance;
     auto start_time = std::chrono::steady_clock::now();
 
-    // --- Background run (non-blocking) ---
+    // --- Run algorithm in background ---
     m_future = QtConcurrent::run([=, this]() mutable {
 
         auto resetUI = [this]() {
@@ -113,11 +113,13 @@ void knapsackWindow::on_pushButton_findBag_clicked()
 
         for (int execution = 0; execution < maxExecutions; ++execution) {
             if (m_stopRequested) break;
+            std::string executionNumber = std::to_string(execution + 1);
 
             auto exec_start = std::chrono::steady_clock::now();
 
-            auto resultBags = algorithm.run(problemCopy, timestamp + 
-                " | execution: " + std::to_string(execution + 1));
+            // Run algorithm
+            auto resultBags = algorithm.run(problemCopy, timestamp +
+                " | execution: " + executionNumber);
 
             auto exec_end = std::chrono::steady_clock::now();
             auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -134,23 +136,23 @@ void knapsackWindow::on_pushButton_findBag_clicked()
                 }, Qt::QueuedConnection);
             }
 
-            // Save results of this execution
-            FILE_PROCESSOR::saveData(resultBags, folderPath.toStdString(), fileName.toStdString(), timestamp);
-
-            // --- Check all bags in this execution ---
-            for (const auto& bag : resultBags) {
-                int currentBenefit = bag->getBenefit();
-                if (currentBenefit > bestBenefitOverall) {
-                    bestBenefitOverall = currentBenefit;
-                    bestBagOverall = std::make_unique<Bag>(*bag);
+            // --- Save all bags in this execution ---
+            for (const std::unique_ptr<Bag>& bag : resultBags) {
+                if (bag && bag->getSize() > 0) {
+                    FILE_PROCESSOR::saveReport(bag, m_problemInstance.getPackages(),
+                        m_problemInstance.getDependencies(), timestamp, folderPath.toStdString(),
+                        fileName.toStdString(), executionNumber);
                 }
             }
 
-            // Update progress
+            // Save summary CSV
+            FILE_PROCESSOR::saveData(resultBags, folderPath.toStdString(), fileName.toStdString(), timestamp);
+
+            // --- Update progress ---
             int progressValue = static_cast<int>((100.0 * (execution + 1)) / maxExecutions);
             QMetaObject::invokeMethod(ui->progressBar, "setValue", Qt::QueuedConnection, Q_ARG(int, progressValue));
 
-            // Update overall elapsed time
+            // --- Update elapsed time ---
             auto now = std::chrono::steady_clock::now();
             auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
             QMetaObject::invokeMethod(this, [=]() {
@@ -160,14 +162,10 @@ void knapsackWindow::on_pushButton_findBag_clicked()
             }, Qt::QueuedConnection);
         }
 
-        std::string reportFile = "";
-        std::string validation = "";
-        // --- Save the best bag overall ---
-        if (bestBagOverall) {
-            reportFile = FILE_PROCESSOR::saveReport(bestBagOverall, m_problemInstance.getPackages(),
-            m_problemInstance.getDependencies(), seed, timestamp, folderPath.toStdString(), fileName.toStdString());
-        }
-        resetUI();;
+        resetUI();
+        QMetaObject::invokeMethod(this, [=]() {
+            QMessageBox::information(this, "Find Bag", "Bag finding finished successfully!");
+        });
     });
 }
 
@@ -208,5 +206,6 @@ void knapsackWindow::on_pushButton_validateReport_clicked()
     std::string reportFile = ui->pushButton_reportFile->text().toStdString();
     std::string validation = FILE_PROCESSOR::validateSolution(problemFile, reportFile);
     ui->plainTextEdit_reportValidation->setPlainText(QString::fromStdString(validation));
+    QMessageBox::information(this, "Report Validation", "Validation finished!");
 }
 
