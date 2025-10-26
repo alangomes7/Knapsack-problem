@@ -1,26 +1,16 @@
 #include "data_model.h"
-#include "package.h"    // Need full definitions for deep copy
-#include "dependency.h" // Need full definitions for deep copy
-#include <unordered_map>
+#include "package.h" 
+#include "dependency.h"
 
-// --- Implementation of ProblemInstance Memory Management ---
+#include <unordered_map>
+#include <utility> // For std::swap
+
+// --- Implementation of ProblemInstance ---
 
 /**
- * @brief Helper function to delete all heap-allocated objects.
+ * @brief Default constructor implementation.
  */
-void ProblemInstance::clear() {
-    // Delete all packages
-    for (Package* pkg : packages) {
-        delete pkg;
-    }
-    packages.clear();
-
-    // Delete all dependencies
-    for (Dependency* dep : dependencies) {
-        delete dep;
-    }
-    dependencies.clear();
-}
+ProblemInstance::ProblemInstance() = default;
 
 /**
  * @brief Destructor implementation.
@@ -31,8 +21,13 @@ ProblemInstance::~ProblemInstance() {
 
 /**
  * @brief Copy Constructor (Deep Copy) implementation.
+ *
+ * This performs a deep copy of all packages and dependencies,
+ * then re-wires the pointers between the new objects.
  */
-ProblemInstance::ProblemInstance(const ProblemInstance& other) : maxCapacity(other.maxCapacity) {
+ProblemInstance::ProblemInstance(const ProblemInstance& other) 
+    : maxCapacity(other.maxCapacity) 
+{
     
     // 1. Create maps to link old pointers to new copies
     std::unordered_map<const Dependency*, Dependency*> oldToNewDeps;
@@ -89,10 +84,16 @@ ProblemInstance::ProblemInstance(const ProblemInstance& other) : maxCapacity(oth
         // Replace the old map with the re-wired map
         oldPkgsMap = std::move(newPkgsMap);
     }
+
+    // 6. Build the dependency map for the new instance
+    buildDependencyMap();
 }
 
 /**
  * @brief Copy Assignment Operator implementation.
+ *
+ * Uses the copy-and-swap idiom by leveraging the
+ * deep-copy constructor.
  */
 ProblemInstance& ProblemInstance::operator=(const ProblemInstance& other) {
     // 1. Check for self-assignment
@@ -100,19 +101,61 @@ ProblemInstance& ProblemInstance::operator=(const ProblemInstance& other) {
         return *this;
     }
 
-    // 2. Clear existing data
-    clear();
-    
-    // 3. Use the copy constructor logic to copy 'other' into 'this'
-    //    We create a temporary deep copy, then swap its contents with ours.
+    // 2. Create a temporary deep copy of 'other'
     ProblemInstance temp(other);
     
-    // Swap the data members
+    // 3. Swap the data members of 'this' with 'temp'
     std::swap(maxCapacity, temp.maxCapacity);
     std::swap(packages, temp.packages);
     std::swap(dependencies, temp.dependencies);
+    std::swap(dependencyMap, temp.dependencyMap);
     
     // 4. When 'temp' goes out of scope, its destructor
-    //    will clean up the data we *used* to own.
+    //    will be called, cleaning up the data *we* used to own.
     return *this;
+}
+
+/**
+ * @brief Helper function to delete all heap-allocated objects.
+ */
+void ProblemInstance::clear() {
+    // Delete all packages
+    for (Package* pkg : packages) {
+        delete pkg;
+    }
+    packages.clear();
+
+    // Delete all dependencies
+    for (Dependency* dep : dependencies) {
+        delete dep;
+    }
+    dependencies.clear();
+
+    dependencyMap.clear();
+}
+
+/**
+ * @brief Populates the dependencyMap for quick lookups by name.
+ */
+void ProblemInstance::buildDependencyMap() {
+    dependencyMap.clear();
+    for (Dependency* d : dependencies) {
+        if (d) {
+            dependencyMap[d->getName()] = d;
+        }
+    }
+}
+
+/**
+ * @brief Generates a string summary of the problem instance.
+ * @return A string with capacity, package count, and dependency count.
+ */
+std::string ProblemInstance::toString() const {
+    std::ostringstream oss;
+    oss << "Problem Instance:{\n"
+        << " max capacity:         " << maxCapacity << " MB\n"
+        << " packages (count):     " << packages.size() << "\n"
+        << " dependencies (count): " << dependencies.size() << "\n"
+        << "}";
+    return oss.str();
 }

@@ -38,12 +38,12 @@ ProblemInstance loadProblem(const std::string& filename);
  * @brief Appends the summary of results from a vector of Bags
  * to a CSV file, including Seed, Local Search, and Metaheuristic parameters.
  *
- * @param bags The vector of Bag pointers containing solution data.
+ * @param bag The bag pointer containing solution data.
  * @param outputDir The directory to save the file in.
  * @param inputFilename The name of the original problem file (for logging).
  * @param fileId The id of the file to save in, used to differentiate multiple runs.
  */
-void saveData(const std::vector<std::unique_ptr<Bag>>& bags,
+void saveData(const std::unique_ptr<Bag>& bag,
               const std::string& outputDir,
               const std::string& inputFilename,
               const std::string& fileId);
@@ -92,8 +92,8 @@ SolutionReport loadReport(const std::string& filename);
  * @param reportFilename The path to the solution report file (.txt).
  * @return String describing the validation result.
  */
-std::string validateSolution(const std::string& problemFilename,
-                             const std::string& reportFilename);
+ValidationResult validateSolution(const std::string& problemFilename,
+                                  const std::string& reportFilename);
 
 /**
  * @brief Converts a path string using backslashes (\) to one

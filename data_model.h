@@ -1,6 +1,7 @@
-#ifndef DATA_STRUCTURES_H
-#define DATA_STRUCTURES_H
+#ifndef DATA_MODEL_H
+#define DATA_MODEL_H
 
+// Standard library headers
 #include <vector>
 #include <string>
 #include <map>
@@ -20,16 +21,32 @@ class Dependency;
  * delete its objects when destroyed.
  */
 struct ProblemInstance {
+    // --- Public Data ---
     int maxCapacity = 0;
     std::vector<Package*> packages;
     std::vector<Dependency*> dependencies;
+    std::unordered_map<std::string, Dependency*> dependencyMap;
 
-    ProblemInstance() = default;
+    // --- Constructors / Destructor / Assignment ---
+    ProblemInstance();
     ~ProblemInstance();
     ProblemInstance(const ProblemInstance& other);
     ProblemInstance& operator=(const ProblemInstance& other);
 
-    // --- Const getters ---
+    // --- Public Methods ---
+
+    /**
+     * @brief Populates the dependencyMap for quick lookups by name.
+     */
+    void buildDependencyMap();
+
+    /**
+     * @brief Generates a string summary of the problem instance.
+     * @return A string with capacity, package count, and dependency count.
+     */
+    [[nodiscard]] std::string toString() const;
+
+    // --- Const Getters ---
     [[nodiscard]] const std::vector<Package*>& getPackages() const {
         return packages;
     }
@@ -38,7 +55,7 @@ struct ProblemInstance {
         return dependencies;
     }
 
-    // --- Non-const getters ---
+    // --- Non-const Getters ---
     std::vector<Package*>& getPackages() {
         return packages;
     }
@@ -47,17 +64,10 @@ struct ProblemInstance {
         return dependencies;
     }
 
-    [[nodiscard]] std::string toString() const {
-        std::ostringstream oss;
-        oss << "Problem Instance:{\n"
-            << " max capacity:         " << maxCapacity << " MB\n"
-            << " packages (count):     " << packages.size() << "\n"
-            << " dependencies (count): " << dependencies.size() << "\n"
-            << "}" << dependencies.size() << "\n";
-        return oss.str();
-    }
-
 private:
+    /**
+     * @brief Deletes all heap-allocated Package and Dependency objects.
+     */
     void clear();
 };
 
@@ -144,4 +154,4 @@ struct ValidationResult {
     }
 };
 
-#endif // DATA_STRUCTURES_H
+#endif // DATA_MODEL_H

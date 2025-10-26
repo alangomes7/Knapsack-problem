@@ -84,7 +84,7 @@ void knapsackWindow::on_pushButton_findBag_clicked()
     int seed = ui->spinBox_algorithmSeed->value();
     int maxExecutions = ui->spinBox_executionTimes->value();
     std::string timestamp = QDateTime::currentDateTime()
-                                .toString("yyyy-MM-dd_HH-mm-ss")
+                                .toString("yyyy:MM:dd HH:mm:ss:ms")
                                 .toStdString();
 
     QFileInfo fileInfo(ui->pushButton_problemFile->text());
@@ -118,8 +118,7 @@ void knapsackWindow::on_pushButton_findBag_clicked()
             auto exec_start = std::chrono::steady_clock::now();
 
             // Run algorithm
-            auto resultBags = algorithm.run(problemCopy, timestamp +
-                " | execution: " + executionNumber);
+            auto resultBags = algorithm.run(problemCopy, timestamp);
 
             auto exec_end = std::chrono::steady_clock::now();
             auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -137,17 +136,23 @@ void knapsackWindow::on_pushButton_findBag_clicked()
             }
 
             // --- Save all bags in this execution ---
-            for (const std::unique_ptr<Bag>& bag : resultBags) {
-                if (bag && bag->getSize() > 0) {
-                    FILE_PROCESSOR::saveReport(bag, m_problemInstance.getPackages(),
-                        m_problemInstance.getDependencies(), timestamp, folderPath.toStdString(),
-                        fileName.toStdString(), executionNumber);
-                }
+        for (const std::unique_ptr<Bag>& bag : resultBags) {
+            if (bag && bag->getSize() > 0) {
+                // Save detailed report
+                std::string reportPath = FILE_PROCESSOR::saveReport(
+                    bag,
+                    m_problemInstance.getPackages(),
+                    m_problemInstance.getDependencies(),
+                    timestamp,
+                    folderPath.toStdString(),
+                    fileName.toStdString(),
+                    executionNumber
+                );
+
+                // Save summary CSV (single bag)
+                FILE_PROCESSOR::saveData(bag, folderPath.toStdString(), fileName.toStdString(), executionNumber);
             }
-
-            // Save summary CSV
-            FILE_PROCESSOR::saveData(resultBags, folderPath.toStdString(), fileName.toStdString(), timestamp);
-
+        }
             // --- Update progress ---
             int progressValue = static_cast<int>((100.0 * (execution + 1)) / maxExecutions);
             QMetaObject::invokeMethod(ui->progressBar, "setValue", Qt::QueuedConnection, Q_ARG(int, progressValue));
@@ -204,8 +209,8 @@ void knapsackWindow::on_pushButton_validateReport_clicked()
 {
     std::string problemFile = ui->pushButton_problemFile->text().toStdString();
     std::string reportFile = ui->pushButton_reportFile->text().toStdString();
-    std::string validation = FILE_PROCESSOR::validateSolution(problemFile, reportFile);
-    ui->plainTextEdit_reportValidation->setPlainText(QString::fromStdString(validation));
+    ValidationResult validation = FILE_PROCESSOR::validateSolution(problemFile, reportFile);
+    ui->plainTextEdit_reportValidation->setPlainText(QString::fromStdString(validation.toString()));
     QMessageBox::information(this, "Report Validation", "Validation finished!");
 }
 

@@ -18,68 +18,84 @@
 namespace FILE_PROCESSOR {
 
 // ────────────────────────────────────────────────
-// CSV summary saver (updated to pull data from Bag)
+// CSV summary saver for single Bag
 // ────────────────────────────────────────────────
-void saveData(const std::vector<std::unique_ptr<Bag>>& bags,
+void saveData(const std::unique_ptr<Bag>& bag,
               const std::string& outputDir,
               const std::string& inputFilename,
               const std::string& fileId)
 {
-    if (bags.empty() || outputDir.empty()) return;
-
-    const std::string csvFile = outputDir + "/summary_results-" + formatTimestampForFileName(fileId) + ".csv";
-
-    bool writeHeader = false;
-    {
-        std::ifstream inFile(csvFile);
-        if (!inFile.is_open() || inFile.peek() == std::ifstream::traits_type::eof())
-        {
-            writeHeader = true;
-        }
-    }
-
-    std::ofstream outFile(csvFile, std::ios::app);
-    if (!outFile.is_open()) {
-        std::cerr << "Error: Could not create or open " << csvFile << std::endl;
+    if (!bag || outputDir.empty()) {
+        std::cerr << "Error: Bag is null or output directory is empty.\n";
         return;
     }
 
-    std::string separator = ",";
+    // --- Safe timestamp for folder ---
+    std::string bagTimestampSafe = FILE_PROCESSOR::formatTimestampForFileName(bag->getTimestamp());
+
+    // --- Folder path ---
+    std::filesystem::path folderPath = std::filesystem::path(outputDir) / ("reports-" + bagTimestampSafe);
+
+    // Create folder if it does not exist
+    std::error_code ec;
+    if (!std::filesystem::exists(folderPath)) {
+        if (!std::filesystem::create_directories(folderPath, ec)) {
+            std::cerr << "Error: Could not create folder " << folderPath.string()
+                      << " (" << ec.message() << ")" << std::endl;
+            return;
+        }
+    }
+
+    // --- CSV file path ---
+    std::filesystem::path csvPath = folderPath / ("summary_results-" + bagTimestampSafe + ".csv");
+
+    // Check if file exists
+    bool writeHeader = !std::filesystem::exists(csvPath) || std::filesystem::file_size(csvPath) == 0;
+
+    std::ofstream outFile(csvPath, std::ios::app);
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Could not open CSV file " << csvPath.string() << std::endl;
+        return;
+    }
+
+    std::string sep = ",";
 
     if (writeHeader) {
-        outFile << "Algorithm" << separator
-                << "Movement" << separator
-                << "Feasibility Strategy" << separator
-                << "File name" << separator
-                << "Timestamp" << separator
-                << "Processing Time (h:m:s.ms)" << separator
-                << "Packages" << separator
-                << "Dependencies" << separator
-                << "Bag Weight" << separator
-                << "Bag Benefit" << separator
-                << "Seed" << separator << "\n";
+        outFile << "Algorithm" << sep
+                << "Movement" << sep
+                << "Feasibility Strategy" << sep
+                << "File name" << sep
+                << "Timestamp" << sep
+                << "Processing Time (h:m:s.ms)" << sep
+                << "Packages" << sep
+                << "Dependencies" << sep
+                << "Bag Weight" << sep
+                << "Bag Benefit" << sep
+                << "Seed" << sep
+                << "Metaheuristic Parameters" << "\n";
     }
 
-    for (const std::unique_ptr<Bag>& bag : bags) {
-        if (!bag) continue;
+    std::string algStr = ALGORITHM::toString(bag->getBagAlgorithm());
+    std::string locStr = ALGORITHM::toString(bag->getBagLocalSearch());
+    if (locStr != "NONE") algStr += " | " + locStr;
 
-        std::string algStr = ALGORITHM::toString(bag->getBagAlgorithm());
-        std::string locStr = ALGORITHM::toString(bag->getBagLocalSearch());
-        if (locStr != "NONE") algStr += " | " + locStr;
+    outFile << algStr << sep
+            << SEARCH_ENGINE::toString(bag->getMovementType()) << sep
+            << SOLUTION_REPAIR::toString(bag->getFeasibilityStrategy()) << sep
+            << inputFilename + "-" + fileId << sep
+            << bag->getTimestamp() << sep
+            << bag->getAlgorithmTimeString() << sep
+            << bag->getPackages().size() << sep
+            << bag->getDependencies().size() << sep
+            << bag->getSize() << sep
+            << bag->getBenefit() << sep
+            << bag->getSeed() << sep
+            << "\"" << bag->getMetaheuristicParameters() << "\""
+            << "\n";
 
-        outFile << algStr << separator
-                << SEARCH_ENGINE::toString(bag->getMovementType()) << separator
-                << SOLUTION_REPAIR::toString(bag->getFeasibilityStrategy()) << separator
-                << inputFilename + "-" + fileId << separator
-                << bag->getTimestamp() << separator
-                << bag->getAlgorithmTimeString() << separator
-                << bag->getPackages().size() << separator
-                << bag->getDependencies().size() << separator
-                << bag->getSize() << separator
-                << bag->getBenefit() << separator
-                << bag->getSeed() << separator << "\n";
-    }
+    outFile.close();
 }
+
 
 // ────────────────────────────────────────────────
 // Detailed report saver for single Bag
@@ -92,53 +108,73 @@ std::string saveReport(const std::unique_ptr<Bag>& bag,
                        const std::string& inputFilename,
                        const std::string& fileId)
 {
-    if (!bag) return "";
-
-    // Ensure timestamp is set
-    std::string bagTimestamp = bag->getTimestamp();
-    if (bagTimestamp.empty() || bagTimestamp == "0000-00-00 00:00:00") {
-        bagTimestamp = timestamp;
-    }
-
-    std::string reportFile = outputDir + "/report_" + fileId + "_" + FILE_PROCESSOR::formatTimestampForFileName(bagTimestamp) + ".txt";
-
-    std::ofstream out(reportFile);
-    if (!out.is_open()) {
-        std::cerr << "Error: Cannot open report file " << reportFile << std::endl;
+    if (!bag || outputDir.empty()) {
+        std::cerr << "Error: Bag is null or output directory is empty.\n";
         return "";
     }
 
-    out << "=== BAG REPORT ===\n";
-    out << "Algorithm: " << ALGORITHM::toString(bag->getBagAlgorithm()) << "\n";
-    out << "Local Search: " << ALGORITHM::toString(bag->getBagLocalSearch()) << "\n";
-    out << "Movement: " << SEARCH_ENGINE::toString(bag->getMovementType()) << "\n";
-    out << "Feasibility Strategy: " << SOLUTION_REPAIR::toString(bag->getFeasibilityStrategy()) << "\n";
-    out << "Timestamp: " << bagTimestamp << "\n";
-    out << "Input File: " << inputFilename + "-" + fileId << "\n";
-    out << "Processing Time (s): " << bag->getAlgorithmTime() << "\n";
-    out << "Packages: " << bag->getPackages().size() << "\n";
-    out << "Dependencies: " << bag->getDependencies().size() << "\n";
-    out << "Bag Weight: " << bag->getSize() << "\n";
-    out << "Bag Benefit: " << bag->getBenefit() << "\n";
-    out << "Seed: " << bag->getSeed() << "\n";  // <- pass seed explicitly
-    out << "Metaheuristic Parameters: " << bag->getMetaheuristicParameters() << "\n";
+    // --- Safe timestamp for folder ---
+    std::string bagTimestampSafe = FILE_PROCESSOR::formatTimestampForFileName(bag->getTimestamp());
 
-    out << "\n=== PACKAGES ===\n";
+    // --- Folder path ---
+    std::filesystem::path folderPath = std::filesystem::path(outputDir) / ("reports-" + bagTimestampSafe);
+
+    // Create folder if it does not exist
+    std::error_code ec;
+    if (!std::filesystem::exists(folderPath)) {
+        if (!std::filesystem::create_directories(folderPath, ec)) {
+            std::cerr << "Error: Could not create folder " << folderPath.string()
+                      << " (" << ec.message() << ")" << std::endl;
+            return "";
+        }
+    }
+
+    // --- Report file path ---
+    std::filesystem::path reportFile = folderPath / ("report_" 
+                                                     + std::to_string(bag->getBenefit()) + "-" 
+                                                     + ALGORITHM::toString(bag->getBagAlgorithm()) + "-"
+                                                     + SEARCH_ENGINE::toString(bag->getMovementType()) + "-"
+                                                     + FILE_PROCESSOR::formatTimestampForFileName(fileId) 
+                                                     + ".txt");
+
+    std::ofstream outFile(reportFile);
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Could not open report file " << reportFile.string() << std::endl;
+        return "";
+    }
+
+    // --- Write detailed report ---
+    outFile << "=== BAG REPORT ===\n";
+    outFile << "Algorithm: " << ALGORITHM::toString(bag->getBagAlgorithm()) << "\n";
+    outFile << "Local Search: " << ALGORITHM::toString(bag->getBagLocalSearch()) << "\n";
+    outFile << "Movement: " << SEARCH_ENGINE::toString(bag->getMovementType()) << "\n";
+    outFile << "Feasibility Strategy: " << SOLUTION_REPAIR::toString(bag->getFeasibilityStrategy()) << "\n";
+    outFile << "Timestamp: " << bag->getTimestamp() << "\n";
+    outFile << "Input File: " << inputFilename + "-" + fileId << "\n";
+    outFile << "Processing Time (s): " << bag->getAlgorithmTime() << "\n";
+    outFile << "Packages: " << bag->getPackages().size() << "\n";
+    outFile << "Dependencies: " << bag->getDependencies().size() << "\n";
+    outFile << "Bag Weight: " << bag->getSize() << "\n";
+    outFile << "Bag Benefit: " << bag->getBenefit() << "\n";
+    outFile << "Seed: " << bag->getSeed() << "\n";
+    outFile << "Metaheuristic Parameters: " << bag->getMetaheuristicParameters() << "\n";
+
+    outFile << "\n=== PACKAGES ===\n";
     for (const Package* p : bag->getPackages()) {
         if (p) {
-            out << p->getName() << " (Benefit: " << p->getBenefit() << ")\n";
+            outFile << p->getName() << " (Benefit: " << p->getBenefit() << ")\n";
         }
     }
 
-    out << "\n=== DEPENDENCIES ===\n";
+    outFile << "\n=== DEPENDENCIES ===\n";
     for (const Dependency* d : bag->getDependencies()) {
         if (d) {
-            out << d->getName() << " (Weight: " << d->getSize() << ")\n";
+            outFile << d->getName() << " (Weight: " << d->getSize() << ")\n";
         }
     }
 
-    out.close();
-    return reportFile;
+    outFile.close();
+    return reportFile.string();
 }
 
 // ----------------------
@@ -262,7 +298,7 @@ ProblemInstance loadProblem(const std::string& filename) {
 
 
 // ----------------------
-// Load report
+// Load solution report
 // ----------------------
 SolutionReport loadReport(const std::string& filename) {
     SolutionReport report;
@@ -271,10 +307,30 @@ SolutionReport loadReport(const std::string& filename) {
 
     std::string line;
     while (std::getline(file, line)) {
-        // Parse report line to fill SolutionReport
-        // Simplified: just add to lines for now
-        // TODO: Implement actual report parsing
-        // report.lines.push_back(line); // Example: this line is not in the original, but shows intent
+        if (line.empty()) continue;
+
+        // Parse reported benefit
+        if (line.find("Bag Benefit:") != std::string::npos) {
+            report.reportedBenefit = std::stol(line.substr(line.find(":") + 1));
+        }
+        // Parse reported weight
+        else if (line.find("Bag Weight:") != std::string::npos) {
+            report.reportedWeight = std::stol(line.substr(line.find(":") + 1));
+        }
+        // Parse packages
+        else if (line.find("=== PACKAGES ===") != std::string::npos) {
+            while (std::getline(file, line) && !line.empty()) {
+                std::string pkgName = line.substr(0, line.find(" "));
+                if (!pkgName.empty()) report.packageVector.push_back(std::stoi(pkgName.substr(1))); // P0 -> 0
+            }
+        }
+        // Parse dependencies
+        else if (line.find("=== DEPENDENCIES ===") != std::string::npos) {
+            while (std::getline(file, line) && !line.empty()) {
+                std::string depName = line.substr(0, line.find(" "));
+                if (!depName.empty()) report.dependencyVector.push_back(std::stoi(depName.substr(1))); // D0 -> 0
+            }
+        }
     }
 
     return report;
@@ -283,30 +339,62 @@ SolutionReport loadReport(const std::string& filename) {
 // ----------------------
 // Validate solution
 // ----------------------
-std::string validateSolution(const std::string& problemFilename, const std::string& reportFilename) {
-    // 'problem' is an RAII object. It will automatically clean up
-    // its heap-allocated packages and dependencies when it goes out of scope.
+ValidationResult validateSolution(const std::string& problemFilename,
+                                  const std::string& reportFilename) {
     ProblemInstance problem = loadProblem(problemFilename);
+    problem.buildDependencyMap(); // build name->Dependency* map
     SolutionReport report = loadReport(reportFilename);
 
-    std::ostringstream msg;
-    msg << "Validation report for " << reportFilename << "\n";
+    ValidationResult result;
+    std::unordered_set<std::string> usedDependencies;
 
-    // TODO: Implement full validation logic as described in the .h file
-    // (e.g., check dependencies, capacity, and benefits).
-    
-    // Example: check if package count matches (simplified)
-    if (report.packageVector.size() != problem.packages.size()) { // Using packageVector as in SolutionReport struct
-        msg << "Mismatch: number of lines in report vs packages\n";
-    } else {
-        msg << "Number of packages matches.\n";
+    // --- Validate packages ---
+    result.packageCount = static_cast<int>(report.packageVector.size());
+    result.calculatedBenefit = 0;
+    result.trueWeight = 0;
+
+    for (int pkgIdx : report.packageVector) {
+        if (pkgIdx >= 0 && pkgIdx < static_cast<int>(problem.packages.size())) {
+            Package* pkg = problem.packages[pkgIdx];
+            result.calculatedBenefit += pkg->getBenefit();
+
+            // Collect dependencies by name
+            for (const auto& dep : pkg->getDependencies()) {
+                usedDependencies.insert(dep.first);
+            }
+        } else {
+            std::cerr << "Warning: Package index " << pkgIdx << " not found in problem instance\n";
+        }
     }
-    
-    // **FIXED:** Removed manual deletion.
-    // The 'problem' object's destructor will be called automatically
-    // when this function returns, correctly freeing the memory.
 
-    return msg.str();
+    // --- Validate dependencies from report ---
+    result.reportedDependencyCount = static_cast<int>(report.dependencyVector.size());
+    for (int depIdx : report.dependencyVector) {
+        if (depIdx >= 0 && depIdx < static_cast<int>(problem.dependencies.size())) {
+            Dependency* d = problem.dependencies[depIdx];
+            result.trueWeight += d->getSize();
+
+            if (usedDependencies.find(d->getName()) == usedDependencies.end()) {
+                std::cerr << "Warning: Reported dependency " << d->getName()
+                          << " not actually used by selected packages\n";
+            }
+        } else {
+            std::cerr << "Warning: Dependency index " << depIdx
+                      << " not found in problem instance\n";
+        }
+    }
+
+    result.trueRequiredDependencyCount = static_cast<int>(usedDependencies.size());
+
+    // --- Validate weight and benefit ---
+    result.isReportedWeightValid = (report.reportedWeight <= problem.maxCapacity);
+    result.isBenefitValid = (report.reportedBenefit == result.calculatedBenefit);
+
+    // --- Consistency: reported packages vs dependencies ---
+    result.isConsistent = (usedDependencies.size() == report.dependencyVector.size());
+    result.isFeasible = (report.reportedWeight <= problem.maxCapacity);
+
+    return result;
 }
 
 // -------------------------------------------------------------------
@@ -327,8 +415,21 @@ std::string backslashesPathToSlashesPath(const std::string& s) {
 // ----------------------
 std::string formatTimestampForFileName(const std::string& ts) {
     std::string formatted = ts;
+
+    // Replace spaces with underscore
     std::replace(formatted.begin(), formatted.end(), ' ', '_');
+
+    // Replace colons with dash
     std::replace(formatted.begin(), formatted.end(), ':', '-');
+
+    // Replace dots in milliseconds with dash (if any)
+    std::replace(formatted.begin(), formatted.end(), '.', '-');
+
+    // Optional: remove any other unsafe characters (just in case)
+    formatted.erase(std::remove_if(formatted.begin(), formatted.end(),
+        [](char c) { return !(isalnum(c) || c == '-' || c == '_'); }),
+        formatted.end());
+
     return formatted;
 }
 
