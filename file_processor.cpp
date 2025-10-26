@@ -44,9 +44,8 @@ static std::vector<int> parseVector(const std::string& line) {
 }
 
 // ────────────────────────────────────────────────
-// Everything else stays inside FILEPROCESSOR
+// Problem file loader
 // ────────────────────────────────────────────────
-
 ProblemInstance loadProblem(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open())
@@ -113,14 +112,17 @@ ProblemInstance loadProblem(const std::string& filename) {
     return problemInstance;
 }
 
+// ────────────────────────────────────────────────
+// CSV summary saver
+// ────────────────────────────────────────────────
 void saveData(const std::vector<std::unique_ptr<Bag>>& bags,
-            const std::string& outputDir,
-            const std::string& inputFilename,
-            const std::string& fileId)
+              const std::string& outputDir,
+              const std::string& inputFilename,
+              const std::string& fileId)
 {
     if (bags.empty() || outputDir.empty()) return;
 
-    const std::string csvFile = outputDir + "/summary_results-" + formatTimestampForFilename(fileId) + ".csv";
+    const std::string csvFile = outputDir + "/summary_results-" + formatTimestampForFileName(fileId) + ".csv";
 
     bool writeHeader = false;
     {
@@ -172,98 +174,83 @@ void saveData(const std::vector<std::unique_ptr<Bag>>& bags,
     }
 }
 
-void saveReport(const std::vector<Bag*>& bags,
-                const std::vector<Package*>& allPackages,
-                const std::vector<Dependency*>& allDependencies,
-                unsigned int seed,
-                const std::string& timestamp,
-                const std::string& outputDir,
-                const std::string& inputFilename)
+// ────────────────────────────────────────────────
+// Detailed TXT report saver (CORRECTED)
+// ────────────────────────────────────────────────
+std::string saveReport(const std::unique_ptr<Bag>& bag,
+                       const std::vector<Package*>& allPackages,
+                       const std::vector<Dependency*>& allDependencies,
+                       unsigned int seed,
+                       const std::string& timestamp,
+                       const std::string& outputDir,
+                       const std::string& inputFilename)
 {
-    if (bags.empty() || outputDir.empty()) {
-        std::cerr << "Error: Cannot generate report from empty set." << std::endl;
-        return;
+    if (!bag) {
+        std::string error = "Error: Cannot generate report from empty bag.";
+        std::cerr << error << std::endl;
+        return error;
     }
 
-    const Bag* bestBag = *std::max_element(bags.begin(), bags.end(),
-        [](const Bag* a, const Bag* b){ return a->getBenefit() < b->getBenefit(); });
+    std::filesystem::create_directories(outputDir);
 
     std::filesystem::path inputPath(inputFilename);
     std::string stem = inputPath.stem().string();
     std::string reportFileName = outputDir + "/report_" + stem + "_" +
-                                 formatTimestampForFilename(timestamp) + ".txt";
+                                 formatTimestampForFileName(timestamp) + ".txt";
 
     std::ofstream out(reportFileName);
     if (!out.is_open()) {
-        std::cerr << "Error: Could not open " << reportFileName << "\n";
-        return;
+        std::string error = "Error: Could not open " + reportFileName;
+        std::cerr << error << "\n";
+        return error;
     }
 
-    //Algorithm algHelper(0,0);
-    std::string algStr = "algHelper.toString(bestBag->getBagAlgorithm())";
-    std::string locStr = "algHelper.toString(bestBag->getBagLocalSearch())";
+    std::string algStr = ALGORITHM::toString(bag->getBagAlgorithm());
+    std::string locStr = ALGORITHM::toString(bag->getBagLocalSearch());
     if (locStr != "None") algStr += " | " + locStr;
 
     out << "--- Experiment Reproduction Report for " << inputFilename << " ---\n";
     out << "Metaheuristic: " << algStr << "\n";
-    out << "Benefit Value: " << bestBag->getBenefit() << "\n";
-    out << "Total Disk Space (Dependencies): " << bestBag->getSize() << " MB\n";
+    out << "Benefit Value: " << bag->getBenefit() << "\n";
+    out << "Total Disk Space (Dependencies): " << bag->getSize() << " MB\n";
 
-    // Print binary vectors
-    std::unordered_set<std::string> packSet, depSet;
-    for (auto* p : bestBag->getPackages()) packSet.insert(p->getName());
-    for (auto* d : bestBag->getDependencies()) depSet.insert(d->getName());
+    // --- Binary selection vectors ---
+    std::unordered_set<std::string> selectedPackages, selectedDeps;
+    for (const Package* p : bag->getPackages()) selectedPackages.insert(p->getName());
+    // Note: requires const Dependency* from Bag::getDependencies()
+    for (const Dependency* d : bag->getDependencies()) selectedDeps.insert(d->getName());
 
-    std::vector<std::string> pkgNames, depNames;
-    for (auto* p : allPackages) pkgNames.push_back(p->getName());
-    for (auto* d : allDependencies) depNames.push_back(d->getName());
-    std::sort(pkgNames.begin(), pkgNames.end());
-    std::sort(depNames.begin(), depNames.end());
-
+    // Package vector
     out << "[";
-    for (size_t i=0;i<pkgNames.size();++i)
-        out << (packSet.count(pkgNames[i]) ? "1" : "0")
-            << (i+1<pkgNames.size()?", ":"");
-    out << "]\n[";
-
-    for (size_t i=0;i<depNames.size();++i)
-        out << (depSet.count(depNames[i]) ? "1" : "0")
-            << (i+1<depNames.size()?", ":"");
+    for (size_t i = 0; i < allPackages.size(); ++i)
+        out << (selectedPackages.count(allPackages[i]->getName()) ? "1" : "0")
+            << (i + 1 < allPackages.size() ? ", " : "");
     out << "]\n";
 
+    // Dependency vector
+    out << "[";
+    for (size_t i = 0; i < allDependencies.size(); ++i)
+        out << (selectedDeps.count(allDependencies[i]->getName()) ? "1" : "0")
+            << (i + 1 < allDependencies.size() ? ", " : "");
+    out << "]\n";
+
+    // Metaheuristic parameters, seed, timestamp, execution time
     out << "Metaheuristic Parameters: "
-        << (bestBag->getMetaheuristicParameters().empty()
-            ? "N/A" : bestBag->getMetaheuristicParameters()) << "\n";
-    out << "Random Seed: " << seed << "\n";
-    out << "Execution Time: " << std::fixed << std::setprecision(5)
-        << bestBag->getAlgorithmTime() << " s\n";
+        << (bag->getMetaheuristicParameters().empty() ? "N/A"
+                                                     : bag->getMetaheuristicParameters())
+        << "\n";
+    out << "Seed: " << seed << "\n";
     out << "Timestamp: " << timestamp << "\n";
+    out << "Execution Time: " << bag->getAlgorithmTimeString() << "\n";
 
-    std::cout << "Detailed report saved to " << reportFileName << "\n";
+    out.close();
+    std::cout << "Report saved to " << reportFileName << "\n";
+    return reportFileName;
 }
 
-std::string backslashesPathToSlashesPath(const std::string& s) {
-    std::string r=s;
-    std::replace(r.begin(), r.end(),'\\','/');
-    return r;
-}
-
-std::string formatTimestampForFilename(const std::string& ts) {
-    std::string t=ts;
-    std::replace(t.begin(),t.end(),' ', '_');
-    std::replace(t.begin(),t.end(),':','-');
-    return t;
-}
-
-std::string createUniqueOutputDir(const std::string& base) {
-    std::string dir=base;
-    int c=1;
-    while (std::filesystem::exists(dir))
-        dir=base + "-" + std::to_string(c++);
-    std::filesystem::create_directory(dir);
-    return dir;
-}
-
+// ────────────────────────────────────────────────
+// Report file loader
+// ────────────────────────────────────────────────
 SolutionReport loadReport(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open())
@@ -285,6 +272,166 @@ SolutionReport loadReport(const std::string& filename) {
     }
     std::cout<<"-> Report file loaded: "<<filename<<"\n";
     return rep;
+}
+
+// ────────────────────────────────────────────────
+// Solution Validator (ADDED)
+// ────────────────────────────────────────────────
+std::string validateSolution(const std::string& problemFilename,
+                           const std::string& reportFilename)
+{
+    ProblemInstance problem;
+    SolutionReport report;
+    std::string msg; // Used for success or error messages
+
+    // 1. Load both files
+    try {
+        problem = loadProblem(problemFilename);
+        report = loadReport(reportFilename);
+    } catch (const std::exception& e) {
+        msg = "Validation Error (Load): " + std::string(e.what());
+        std::cerr << msg << std::endl;
+        return msg;
+    }
+
+    // 2. Check for vector size mismatch
+    if (problem.packages.size() != report.packageVector.size()) {
+        msg = "Validation Failed: Package count mismatch. Problem=" +
+              std::to_string(problem.packages.size()) + ", Report=" +
+              std::to_string(report.packageVector.size());
+        std::cerr << msg << std::endl;
+        return msg;
+    }
+    if (problem.dependencies.size() != report.dependencyVector.size()) {
+        msg = "Validation Failed: Dependency count mismatch. Problem=" +
+              std::to_string(problem.dependencies.size()) + ", Report=" +
+              std::to_string(report.dependencyVector.size());
+        std::cerr << msg << std::endl;
+        return msg;
+    }
+
+    long calculatedBenefit = 0;
+    long calculatedWeight = 0;
+    // Use pointers as Dependency and Package objects are managed by ProblemInstance
+    std::unordered_set<Dependency*> includedDependencies;
+    std::unordered_set<Dependency*> requiredDependencies;
+
+    // 3. Calculate actual weight from the report's dependency vector
+    //    and build the set of *included* dependencies.
+    for (size_t i = 0; i < report.dependencyVector.size(); ++i) {
+        if (report.dependencyVector[i] == 1) {
+            Dependency* dep = problem.dependencies[i];
+            // Assuming Dependency class has getSize() or getWeight()
+            calculatedWeight += dep->getSize(); 
+            includedDependencies.insert(dep);
+        }
+    }
+
+    // 4. Calculate actual benefit from the report's package vector
+    //    and build the set of *required* dependencies.
+    for (size_t i = 0; i < report.packageVector.size(); ++i) {
+        if (report.packageVector[i] == 1) {
+            Package* pkg = problem.packages[i];
+            calculatedBenefit += pkg->getBenefit();
+            
+            // Assumes Package::getDependencies() returns std::unordered_map<std::string, Dependency *>&
+            for (const auto& [depName, reqDep] : pkg->getDependencies()) {
+                requiredDependencies.insert(reqDep);
+            }
+        }
+    }
+
+    // --- 5. Run All Validation Checks ---
+
+    // Check A: Correctness of Benefit
+    if (calculatedBenefit != report.reportedBenefit) {
+        msg = "Validation Failed: Benefit mismatch. Reported=" +
+              std::to_string(report.reportedBenefit) + ", Calculated=" +
+              std::to_string(calculatedBenefit);
+        std::cerr << msg << std::endl;
+        return msg;
+    }
+
+    // Check B: Correctness of Weight
+    if (calculatedWeight != report.reportedWeight) {
+        msg = "Validation Failed: Weight mismatch. Reported=" +
+              std::to_string(report.reportedWeight) + ", Calculated=" +
+              std::to_string(calculatedWeight);
+        std::cerr << msg << std::endl;
+        return msg;
+    }
+
+    // Check C: Feasibility (Capacity)
+    if (calculatedWeight > problem.maxCapacity) {
+        msg = "Validation Failed: Solution exceeds max capacity. Weight=" +
+              std::to_string(calculatedWeight) + ", Max=" +
+              std::to_string(problem.maxCapacity);
+        std::cerr << msg << std::endl;
+        return msg;
+    }
+
+    // Check D: Feasibility (Dependencies)
+    // All dependencies required by packages MUST be in the solution.
+    for (Dependency* reqDep : requiredDependencies) {
+        if (includedDependencies.find(reqDep) == includedDependencies.end()) {
+            msg = "Validation Failed: Missing required dependency. "
+                  "A selected package requires " + reqDep->getName() +
+                  " but it is not in the dependency list.";
+            std::cerr << msg << std::endl;
+            return msg;
+        }
+    }
+
+    // Check E: Optimality (No unused dependencies)
+    // All dependencies in the solution MUST be required by a package.
+    if (requiredDependencies.size() != includedDependencies.size()) {
+        msg = "Validation Failed: Solution includes unused dependencies. "
+              "Required: " + std::to_string(requiredDependencies.size()) +
+              ", Included: " + std::to_string(includedDependencies.size());
+        std::cerr << msg;
+        
+        // Find and report the first unused dependency
+        for(Dependency* incDep : includedDependencies) {
+            if (requiredDependencies.find(incDep) == requiredDependencies.end()) {
+                 msg += "\n -> Example unused dependency: " + incDep->getName();
+                 std::cerr << "\n -> Example unused dependency: " << incDep->getName() << std::endl;
+                 break;
+            }
+        }
+        return msg;
+    }
+
+    // If all checks pass:
+    msg = "Validation Success: Solution in " + reportFilename +
+          " is valid for " + problemFilename + ".";
+    std::cout << msg << std::endl;
+    return msg; // Return success message
+}
+
+
+// ────────────────────────────────────────────────
+// Utility functions
+// ────────────────────────────────────────────────
+std::string backslashesPathToSlashesPath(const std::string& s) {
+    std::string r=s;
+    std::replace(r.begin(), r.end(),'\\','/');
+    return r;
+}
+
+std::string formatTimestampForFileName(const std::string& ts) {
+    std::string t=ts;
+    std::replace(t.begin(),t.end(),' ', '_');
+    std::replace(t.begin(),t.end(),':','-');
+    return t;
+}
+
+std::string createUniqueOutputDir(const std::string& base) {
+    std::string dir=base;
+    int c=1;
+    while (std::filesystem::exists(dir))
+        dir=base + "-" + std::to_string(c++);
+    std::filesystem::create_directory(dir);
+    return dir;
 }
 
 } // namespace FILE_PROCESSOR

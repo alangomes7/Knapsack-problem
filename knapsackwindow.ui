@@ -27,7 +27,7 @@
      <string>Problem</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_problem">
+   <widget class="QPushButton" name="pushButton_problemFile">
     <property name="geometry">
      <rect>
       <x>100</x>
@@ -293,6 +293,78 @@
       <minute>0</minute>
       <second>0</second>
      </time>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_bestBag">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>290</y>
+      <width>121</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Report</string>
+    </property>
+   </widget>
+   <widget class="QPlainTextEdit" name="plainTextEdit_report">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>310</y>
+      <width>351</width>
+      <height>231</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_bestBagValidation">
+    <property name="geometry">
+     <rect>
+      <x>410</x>
+      <y>290</y>
+      <width>131</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Report Validation</string>
+    </property>
+   </widget>
+   <widget class="QPlainTextEdit" name="plainTextEdit_reportValidation">
+    <property name="geometry">
+     <rect>
+      <x>410</x>
+      <y>310</y>
+      <width>371</width>
+      <height>231</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_reportFile">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>250</y>
+      <width>661</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>select report</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_validateReport">
+    <property name="geometry">
+     <rect>
+      <x>700</x>
+      <y>250</y>
+      <width>83</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>validate</string>
     </property>
    </widget>
   </widget>

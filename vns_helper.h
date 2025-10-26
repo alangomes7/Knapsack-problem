@@ -25,6 +25,7 @@ namespace VNS_HELPER {
      * @param allPackages All available packages.
      * @param bagSize Maximum bag capacity.
      * @param dependencyGraph Precomputed package dependency graph.
+     * @param generator A reference to the random number generator to use.
      * @param tmpOutside (Optional) reusable buffer for packages outside the bag.
      * @return Unique pointer to the new shaken solution.
      */
@@ -34,6 +35,7 @@ namespace VNS_HELPER {
         const std::vector<Package*>& allPackages,
         int bagSize,
         const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
+        std::mt19937& generator,
         std::vector<Package*>& tmpOutside
     );
 

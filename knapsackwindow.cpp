@@ -31,7 +31,7 @@ knapsackWindow::~knapsackWindow()
 
 void knapsackWindow::initializeUi()
 {
-    ui->pushButton_problem->setText("Select an instance");
+    ui->pushButton_problemFile->setText("Select an instance");
     ui->timeEdit_maxExecutionTime->setDisplayFormat("mm:ss");
     ui->timeEdit_maxExecutionTime->setTime(QTime(0, 1, 30));
     ui->timeEdit_maxExecutionTime->setTimeRange(QTime(0, 0, 0, 0), QTime(0, 59, 59));
@@ -41,7 +41,7 @@ void knapsackWindow::initializeUi()
     ui->spinBox_executionTimes->setValue(1);
 }
 
-void knapsackWindow::on_pushButton_problem_clicked()
+void knapsackWindow::on_pushButton_problemFile_clicked()
 {
     try {
         QString problemFile = QFileDialog::getOpenFileName(
@@ -55,10 +55,10 @@ void knapsackWindow::on_pushButton_problem_clicked()
             m_problemInstance = FILE_PROCESSOR::loadProblem(problemFile.toStdString());
             QString problemPrint = QString::fromStdString(m_problemInstance.toString());
             ui->plainTextEdit_problem->setPlainText(problemPrint);
-            ui->pushButton_problem->setText(problemFile);
+            ui->pushButton_problemFile->setText(problemFile);
         }
     } catch (const std::exception &e) {
-        ui->pushButton_problem->setText("Select an instance");
+        ui->pushButton_problemFile->setText("Select an instance");
         ui->plainTextEdit_problem->setPlainText("Error loading problem.");
         QMessageBox::critical(this, "Error", QString("Failed to load problem file:\n%1").arg(e.what()));
     } catch (...) {
@@ -70,7 +70,7 @@ void knapsackWindow::on_pushButton_findBag_clicked()
 {
     // --- Disable UI elements ---
     ui->pushButton_findBag->setEnabled(false);
-    ui->pushButton_problem->setEnabled(false);
+    ui->pushButton_problemFile->setEnabled(false);
     ui->pushButton_stop->setEnabled(true);
     m_stopRequested = false;
 
@@ -87,41 +87,35 @@ void knapsackWindow::on_pushButton_findBag_clicked()
                                 .toString("yyyy-MM-dd_HH-mm-ss")
                                 .toStdString();
 
-    QFileInfo fileInfo(ui->pushButton_problem->text());
+    QFileInfo fileInfo(ui->pushButton_problemFile->text());
     QString folderPath = fileInfo.absolutePath();
     QString fileName = fileInfo.fileName();
 
     ProblemInstance problemCopy = m_problemInstance;
-
     auto start_time = std::chrono::steady_clock::now();
-     
+
     // --- Background run (non-blocking) ---
     m_future = QtConcurrent::run([=, this]() mutable {
-        
-        // This lambda defines the UI state upon completion or stop
+
         auto resetUI = [this]() {
             QMetaObject::invokeMethod(this, [=]() {
                 ui->pushButton_stop->setText("Stop");
-                // Logically, stop should be disabled when the task is not running
-                ui->pushButton_stop->setEnabled(false); 
+                ui->pushButton_stop->setEnabled(false);
                 ui->pushButton_findBag->setEnabled(true);
-                ui->pushButton_problem->setEnabled(true);
+                ui->pushButton_problemFile->setEnabled(true);
                 ui->progressBar->setValue(0);
             }, Qt::QueuedConnection);
         };
 
-        // --- Algorithm setup ---
         Algorithm algorithm(maxExecutionTime - 1, seed);
-
-        int completed = 0; 
-        std::chrono::milliseconds firstExecutionTime(0);
+        std::unique_ptr<Bag> bestBagOverall = nullptr;
+        int bestBenefitOverall = std::numeric_limits<int>::min();
 
         for (int execution = 0; execution < maxExecutions; ++execution) {
             if (m_stopRequested) break;
 
             auto exec_start = std::chrono::steady_clock::now();
 
-            // --- Run algorithm once (sequential) ---
             auto resultBags = algorithm.run(problemCopy, timestamp + 
                 " | execution: " + std::to_string(execution + 1));
 
@@ -130,67 +124,50 @@ void knapsackWindow::on_pushButton_findBag_clicked()
                 exec_end - exec_start
             );
 
-            // --- Estimate total time based on first execution ---
+            // Estimate total time based on first execution
             if (execution == 0) {
-                firstExecutionTime = elapsedMs;
-                auto estimatedTotalMs = firstExecutionTime.count() * maxExecutions;
-
+                auto estimatedTotalMs = elapsedMs.count() * maxExecutions;
                 QMetaObject::invokeMethod(this, [=]() {
-                    QTime estimated = QTime::fromMSecsSinceStartOfDay(
-                        static_cast<int>(estimatedTotalMs % 86400000)
+                    ui->timeEdit_estimatedTotalTime->setTime(
+                        QTime::fromMSecsSinceStartOfDay(static_cast<int>(estimatedTotalMs % 86400000))
                     );
-                    ui->timeEdit_estimatedTotalTime->setTime(estimated);
                 }, Qt::QueuedConnection);
             }
 
+            // Save results of this execution
             FILE_PROCESSOR::saveData(resultBags, folderPath.toStdString(), fileName.toStdString(), timestamp);
 
-            // --- Update progress ---
-            int progressValue = static_cast<int>(
-                (100.0 * (++completed)) / maxExecutions
-            );
+            // --- Check all bags in this execution ---
+            for (const auto& bag : resultBags) {
+                int currentBenefit = bag->getBenefit();
+                if (currentBenefit > bestBenefitOverall) {
+                    bestBenefitOverall = currentBenefit;
+                    bestBagOverall = std::make_unique<Bag>(*bag);
+                }
+            }
 
-            QMetaObject::invokeMethod(ui->progressBar, "setValue", Qt::QueuedConnection,
-                                        Q_ARG(int, progressValue));
+            // Update progress
+            int progressValue = static_cast<int>((100.0 * (execution + 1)) / maxExecutions);
+            QMetaObject::invokeMethod(ui->progressBar, "setValue", Qt::QueuedConnection, Q_ARG(int, progressValue));
 
-            // --- Update elapsed overall time ---
+            // Update overall elapsed time
             auto now = std::chrono::steady_clock::now();
-            auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                now - start_time
-            ).count();
-
+            auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
             QMetaObject::invokeMethod(this, [=]() {
-                QTime partial = QTime::fromMSecsSinceStartOfDay(
-                    static_cast<int>(durationMs % 86400000)
+                ui->timeEdit_executionTimeOverall->setTime(
+                    QTime::fromMSecsSinceStartOfDay(static_cast<int>(durationMs % 86400000))
                 );
-                ui->timeEdit_executionTimeOverall->setTime(partial);
             }, Qt::QueuedConnection);
         }
 
-        // --- Handle early stop ---
-        if (m_stopRequested) {
-            QMetaObject::invokeMethod(ui->progressBar, "setValue", Qt::QueuedConnection,
-                                        Q_ARG(int, 0));
-            qDebug() << "Execution stopped by user.";
-            resetUI();
-            return;
+        std::string reportFile = "";
+        std::string validation = "";
+        // --- Save the best bag overall ---
+        if (bestBagOverall) {
+            reportFile = FILE_PROCESSOR::saveReport(bestBagOverall, m_problemInstance.getPackages(),
+            m_problemInstance.getDependencies(), seed, timestamp, folderPath.toStdString(), fileName.toStdString());
         }
-
-        // --- Final total timing ---
-        auto end_time = std::chrono::steady_clock::now();
-        auto totalDurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-            end_time - start_time
-        ).count();
-
-        QMetaObject::invokeMethod(this, [=]() {
-            ui->progressBar->setValue(100);
-            QTime finalTime = QTime::fromMSecsSinceStartOfDay(
-                static_cast<int>(totalDurationMs % 86400000)
-            );
-            ui->timeEdit_executionTimeOverall->setTime(finalTime);
-        }, Qt::QueuedConnection);
-
-        resetUI();
+        resetUI();;
     });
 }
 
@@ -199,5 +176,37 @@ void knapsackWindow::on_pushButton_stop_clicked()
     m_stopRequested = true;
     ui->pushButton_stop->setEnabled(false);
     ui->pushButton_stop->setText("Stopping...");
+}
+
+
+void knapsackWindow::on_pushButton_reportFile_clicked()
+{
+    try {
+        QString m_reportFile = QFileDialog::getOpenFileName(
+            this,
+            tr("Open File"),
+            "./../input/",
+            tr("Text Files (*.txt);;Knapsack Files (*.knapsack)")
+        );
+
+        if (!m_reportFile.isEmpty()) {
+            ui->pushButton_reportFile->setText(m_reportFile);
+            SolutionReport solutionReport= FILE_PROCESSOR::loadReport(m_reportFile.toStdString());
+            ui->plainTextEdit_report->setPlainText(QString::fromStdString(solutionReport.toString()));
+        }
+    } catch (const std::exception &e) {
+        ui->pushButton_reportFile->setText("Select a report file");
+        QMessageBox::critical(this, "Error", QString("Failed to load report file:\n%1").arg(e.what()));
+    } catch (...) {
+        QMessageBox::critical(this, "Error", "An unknown error occurred.");
+    }
+}
+
+void knapsackWindow::on_pushButton_validateReport_clicked()
+{
+    std::string problemFile = ui->pushButton_problemFile->text().toStdString();
+    std::string reportFile = ui->pushButton_reportFile->text().toStdString();
+    std::string validation = FILE_PROCESSOR::validateSolution(problemFile, reportFile);
+    ui->plainTextEdit_reportValidation->setPlainText(QString::fromStdString(validation));
 }
 

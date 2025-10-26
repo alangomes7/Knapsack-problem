@@ -30,14 +30,14 @@ enum class FEASIBILITY_STRATEGY {
  * @param bag The Bag to validate and repair.
  * @param maxCapacity The maximum allowed capacity.
  * @param dependencyGraph The dependency graph.
- * @param main_rng A seeded random number generator for reproducible results.
+ * @param seed The seed for the random number generator for reproducible results.
  * @return true if the Bag is valid after the operation, false otherwise.
  */
 bool repair(
     Bag& bag,
     int maxCapacity,
     const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph,
-    std::mt19937& main_rng // <-- MODIFIED: Added generator
+    unsigned int seed
 );
 
 std::string toString(FEASIBILITY_STRATEGY feasibilityStrategy);

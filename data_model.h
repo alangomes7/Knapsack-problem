@@ -24,28 +24,29 @@ struct ProblemInstance {
     std::vector<Package*> packages;
     std::vector<Dependency*> dependencies;
 
-    // --- Constructor & Rule of Three ---
     ProblemInstance() = default;
-    
-    /**
-     * @brief Destructor: Cleans up all heap-allocated Packages and Dependencies.
-     */
     ~ProblemInstance();
-
-    /**
-     * @brief Copy Constructor: Performs a deep copy of the entire instance.
-     */
     ProblemInstance(const ProblemInstance& other);
-
-    /**
-     * @brief Copy Assignment Operator (for completeness).
-     */
     ProblemInstance& operator=(const ProblemInstance& other);
 
-    /**
-     * @brief Generates a string representation of the problem instance.
-     * @return A formatted string summarizing the struct's fields.
-     */
+    // --- Const getters ---
+    [[nodiscard]] const std::vector<Package*>& getPackages() const {
+        return packages;
+    }
+
+    [[nodiscard]] const std::vector<Dependency*>& getDependencies() const {
+        return dependencies;
+    }
+
+    // --- Non-const getters ---
+    std::vector<Package*>& getPackages() {
+        return packages;
+    }
+
+    std::vector<Dependency*>& getDependencies() {
+        return dependencies;
+    }
+
     [[nodiscard]] std::string toString() const {
         std::ostringstream oss;
         oss << "Problem Instance:\n"
@@ -56,7 +57,6 @@ struct ProblemInstance {
     }
 
 private:
-    // Helper to clear memory, used by destructor and assignment operator
     void clear();
 };
 

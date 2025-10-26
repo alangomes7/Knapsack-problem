@@ -75,7 +75,7 @@ Package* ConstructiveSolutions::pickRandomPackage(std::vector<Package*>& package
         return nullptr;
     }
     // Note: RANDOM_PROVIDER::getInt is inclusive, so (0, size - 1) is correct
-    int index = RANDOM_PROVIDER::getInt(0, packageList.size() - 1);
+    int index = RANDOM_PROVIDER::getInt(0, packageList.size() - 1, m_generator);
     Package* pickedPackage = packageList[index];
     packageList.erase(packageList.begin() + index);
     return pickedPackage;
@@ -100,7 +100,7 @@ Package* ConstructiveSolutions::pickSemiRandomPackage(std::vector<Package*>& pac
     if (candidatePoolSize <= 0) {
         return nullptr;
     }
-    int index = RANDOM_PROVIDER::getInt(0, candidatePoolSize - 1);
+    int index = RANDOM_PROVIDER::getInt(0, candidatePoolSize - 1, m_generator);
     Package* pickedPackage = packageList[index];
     packageList.erase(packageList.begin() + index);
     return pickedPackage;
@@ -162,7 +162,7 @@ std::unique_ptr<Bag> ConstructiveSolutions::fillBagWithStrategy(int bagSize, std
     }
     
     // Pass the dereferenced unique_ptr (*bag)
-    SOLUTION_REPAIR::repair(*bag, bagSize, m_dependencyGraph, m_generator);
+    SOLUTION_REPAIR::repair(*bag, bagSize, m_dependencyGraph, m_generator());
 
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
