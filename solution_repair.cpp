@@ -22,8 +22,7 @@ std::string toString(FEASIBILITY_STRATEGY strategy)
     switch (strategy) {
         case FEASIBILITY_STRATEGY::SMART: return "SMART";
         case FEASIBILITY_STRATEGY::TEMPERATURE_BIASED: return "TEMPERATURE_BIASED";
-        case FEASIBILITY_STRATEGY::PROBABILISTIC_GREEDY: return "PROBABILISTIC_GREEDY";
-        default: return "UNKNOWN";
+        default: return "PROBABILISTIC_GREEDY";
     }
 }
 
@@ -163,18 +162,22 @@ static bool fixWithStrategy(Bag& bag, int maxCapacity,
         const Package* pkgToRemove = nullptr;
         switch (strategy) {
             case FEASIBILITY_STRATEGY::SMART: {
+                bag.setFeasibilityStrategy(FEASIBILITY_STRATEGY::SMART);
                 pkgToRemove = std::min_element(scores.begin(), scores.end(),
                                                [](const PackageScore& a, const PackageScore& b) {
                                                    return a.smartScore < b.smartScore;
                                                })->pkg;
                 break;
             }
-            case FEASIBILITY_STRATEGY::PROBABILISTIC_GREEDY:
-                pkgToRemove = selectProbabilistic(scores, rng);
-                break;
             case FEASIBILITY_STRATEGY::TEMPERATURE_BIASED: {
+                bag.setFeasibilityStrategy(FEASIBILITY_STRATEGY::TEMPERATURE_BIASED);
                 double temperature = std::max(0.0, (currentSize - maxCapacity) / initialOver);
                 pkgToRemove = selectTemperatureBiased(scores, temperature, rng);
+                break;
+            }
+            default:{
+                bag.setFeasibilityStrategy(FEASIBILITY_STRATEGY::PROBABILISTIC_GREEDY);
+                pkgToRemove = selectProbabilistic(scores, rng);
                 break;
             }
         }
@@ -182,7 +185,7 @@ static bool fixWithStrategy(Bag& bag, int maxCapacity,
         if (pkgToRemove) bag.removePackage(*pkgToRemove, dependencyGraph.at(pkgToRemove));
         currentSize = computeBagSize(bag, dependencyGraph);
     }
-
+    bag.setFeasibilityStrategy(FEASIBILITY_STRATEGY::NONE);
     return (currentSize <= maxCapacity);
 }
 
