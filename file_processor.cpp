@@ -159,19 +159,58 @@ std::string saveReport(const std::unique_ptr<Bag>& bag,
     outFile << "Seed: " << bag->getSeed() << "\n";
     outFile << "Metaheuristic Parameters: " << bag->getMetaheuristicParameters() << "\n";
 
-    outFile << "\n=== PACKAGES ===\n";
+    // --- MODIFIED SECTION: PACKAGES ---
+    // Create a set of selected package names for efficient lookup
+    std::unordered_set<std::string> selectedPackages;
     for (const Package* p : bag->getPackages()) {
-        if (p) {
-            outFile << p->getName() << " (Benefit: " << p->getBenefit() << ")\n";
+        if (p) selectedPackages.insert(p->getName());
+    }
+
+    outFile << "\n=== PACKAGES ===\n";
+    std::stringstream ssPackages;
+    ssPackages << "[";
+    bool firstPkg = true;
+    for (const Package* p_all : allPackages) {
+        if (!firstPkg) {
+            ssPackages << ",";
         }
+        if (p_all && selectedPackages.count(p_all->getName())) {
+            ssPackages << "1";
+        } else {
+            ssPackages << "0";
+        }
+        firstPkg = false;
+    }
+    ssPackages << "]";
+    outFile << ssPackages.str() << "\n";
+    // --- END MODIFIED SECTION ---
+
+
+    // --- MODIFIED SECTION: DEPENDENCIES ---
+    // Create a set of selected dependency names for efficient lookup
+    std::unordered_set<std::string> selectedDependencies;
+    for (const Dependency* d : bag->getDependencies()) {
+        if (d) selectedDependencies.insert(d->getName());
     }
 
     outFile << "\n=== DEPENDENCIES ===\n";
-    for (const Dependency* d : bag->getDependencies()) {
-        if (d) {
-            outFile << d->getName() << " (Weight: " << d->getSize() << ")\n";
+    std::stringstream ssDependencies;
+    ssDependencies << "[";
+    bool firstDep = true;
+    for (const Dependency* d_all : allDependencies) {
+        if (!firstDep) {
+            ssDependencies << ",";
         }
+        if (d_all && selectedDependencies.count(d_all->getName())) {
+            ssDependencies << "1";
+        } else {
+            ssDependencies << "0";
+        }
+        firstDep = false;
     }
+    ssDependencies << "]";
+    outFile << ssDependencies.str() << "\n";
+    // --- END MODIFIED SECTION ---
 
     outFile.close();
     return reportFile.string();
@@ -317,20 +356,41 @@ SolutionReport loadReport(const std::string& filename) {
         else if (line.find("Bag Weight:") != std::string::npos) {
             report.reportedWeight = std::stol(line.substr(line.find(":") + 1));
         }
-        // Parse packages
+        // --- MODIFIED SECTION: PACKAGES ---
+        // Parse packages from binary vector [0,0,1,...]
         else if (line.find("=== PACKAGES ===") != std::string::npos) {
-            while (std::getline(file, line) && !line.empty()) {
-                std::string pkgName = line.substr(0, line.find(" "));
-                if (!pkgName.empty()) report.packageVector.push_back(std::stoi(pkgName.substr(1))); // P0 -> 0
+            if (std::getline(file, line) && !line.empty()) { // Read the binary string line [0,0,1,...]
+                int index = 0;
+                for (char c : line) {
+                    if (c == '1') {
+                        report.packageVector.push_back(index);
+                        index++;
+                    } else if (c == '0') {
+                        index++;
+                    }
+                    // Ignore '[' ']' and ','
+                }
             }
         }
-        // Parse dependencies
+        // --- END MODIFIED SECTION ---
+
+        // --- MODIFIED SECTION: DEPENDENCIES ---
+        // Parse dependencies from binary vector [0,0,1,...]
         else if (line.find("=== DEPENDENCIES ===") != std::string::npos) {
-            while (std::getline(file, line) && !line.empty()) {
-                std::string depName = line.substr(0, line.find(" "));
-                if (!depName.empty()) report.dependencyVector.push_back(std::stoi(depName.substr(1))); // D0 -> 0
+            if (std::getline(file, line) && !line.empty()) { // Read the binary string line [0,0,1,...]
+                int index = 0;
+                for (char c : line) {
+                    if (c == '1') {
+                        report.dependencyVector.push_back(index);
+                        index++;
+                    } else if (c == '0') {
+                        index++;
+                    }
+                    // Ignore '[' ']' and ','
+                }
             }
         }
+        // --- END MODIFIED SECTION ---
     }
 
     return report;
