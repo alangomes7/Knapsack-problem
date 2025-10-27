@@ -61,7 +61,6 @@ std::unique_ptr<Bag> GRASP::run(
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
     bestBagOverall->setAlgorithmTime(elapsed_seconds.count());
     bestBagOverall->setBagAlgorithm(ALGORITHM::ALGORITHM_TYPE::GRASP);
-    bestBagOverall->setLocalSearch(ALGORITHM::LOCAL_SEARCH::NONE);
     bestBagOverall->setMovementType(moveType);
     auto total_iterations = m_totalIterations.load();
     auto improvements = m_improvements.load();
@@ -113,8 +112,12 @@ void GRASP::graspWorker(WorkerContext ctx) {
         if (currentBag->getSize() < static_cast<int>(ctx.bagSize * 0.95) || currentBag->getBenefit() > localBest->getBenefit()) {
             localSearchPhase(localEngine, *currentBag, ctx.bagSize, *ctx.allPackages,
                              ctx.moveType, ALGORITHM::LOCAL_SEARCH::BEST_IMPROVEMENT,
-                             *ctx.dependencyGraph, ctx.maxLS_IterationsWithoutImprovement,
-                             ctx.max_Iterations, ctx.deadline);
+                             *ctx.dependencyGraph, ctx.maxLS_IterationsWithoutImprovement / 2,
+                             ctx.max_Iterations / 2, ctx.deadline);
+            localSearchPhase(localEngine, *currentBag, ctx.bagSize, *ctx.allPackages,
+                             ctx.moveType, ALGORITHM::LOCAL_SEARCH::RANDOM_IMPROVEMENT,
+                             *ctx.dependencyGraph, ctx.maxLS_IterationsWithoutImprovement / 2,
+                             ctx.max_Iterations / 2, ctx.deadline);
         }
 
         // 3. Check improvement

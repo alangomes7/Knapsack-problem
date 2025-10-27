@@ -54,7 +54,6 @@ std::unique_ptr<Bag> VNS::run(
     auto end_time = std::chrono::steady_clock::now();
     bestBag->setAlgorithmTime(std::chrono::duration<double>(end_time - start_time).count());
     bestBag->setBagAlgorithm(ALGORITHM::ALGORITHM_TYPE::VNS);
-    bestBag->setLocalSearch(ALGORITHM::LOCAL_SEARCH::NONE);
     bestBag->setMetaheuristicParameters("k_max=" + std::to_string(k_max));
 
     return bestBag;

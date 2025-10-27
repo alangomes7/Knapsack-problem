@@ -50,8 +50,8 @@ std::string toString(LOCAL_SEARCH localSearch)
         case LOCAL_SEARCH::FIRST_IMPROVEMENT: return "First Improvement";
         case LOCAL_SEARCH::BEST_IMPROVEMENT: return "Best Improvement";
         case LOCAL_SEARCH::RANDOM_IMPROVEMENT: return "Random Improvement";
-        case LOCAL_SEARCH::NONE: return "NONE";
-        default: return "VNS";
+        case LOCAL_SEARCH::VNS: return "VNS";
+        default: return "NONE";
     }
 }
 

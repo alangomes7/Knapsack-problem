@@ -26,7 +26,7 @@ std::unique_ptr<Bag> VND::run(int bagSize, const Bag* initialBag,
     };
 
     const int k_max = static_cast<int>(movements.size());
-    ALGORITHM::LOCAL_SEARCH searchMethod = ALGORITHM::LOCAL_SEARCH::BEST_IMPROVEMENT;
+    ALGORITHM::LOCAL_SEARCH localSearchMethod = ALGORITHM::LOCAL_SEARCH::BEST_IMPROVEMENT;
 
     auto bestBag = std::make_unique<Bag>(*initialBag);
     bestBag->setMetaheuristicParameters("k_max=" + std::to_string(k_max));
@@ -48,7 +48,7 @@ std::unique_ptr<Bag> VND::run(int bagSize, const Bag* initialBag,
             bagSize,
             allPackages,
             movements[k],
-            searchMethod,
+            localSearchMethod,
             dependencyGraph,
             200,
             2000,
@@ -69,7 +69,6 @@ std::unique_ptr<Bag> VND::run(int bagSize, const Bag* initialBag,
     auto end_time = std::chrono::steady_clock::now();
     bestBag->setAlgorithmTime(std::chrono::duration<double>(end_time - start_time).count());
     bestBag->setBagAlgorithm(ALGORITHM::ALGORITHM_TYPE::VND);
-    bestBag->setLocalSearch(ALGORITHM::LOCAL_SEARCH::NONE);
 
     return bestBag;
 }

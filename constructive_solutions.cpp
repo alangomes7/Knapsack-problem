@@ -133,7 +133,6 @@ std::vector<Package*> ConstructiveSolutions::sortedPackagesBySize(const std::vec
     return sortedList;
 }
 
-// Return std::unique_ptr<Bag>
 std::unique_ptr<Bag> ConstructiveSolutions::fillBagWithStrategy(int bagSize, std::vector<Package*>& packages,
                                       std::function<Package*(std::vector<Package*>&)> pickStrategy,
                                       ALGORITHM::ALGORITHM_TYPE type) {
@@ -142,14 +141,18 @@ std::unique_ptr<Bag> ConstructiveSolutions::fillBagWithStrategy(int bagSize, std
     if (packages.empty()) {
         return bag;
     }
-
+    SearchEngine searchEngine(m_generator());
     auto compatibilityCache = std::unordered_map<const Package*, bool>();
-    auto inBagCache = std::unordered_set<const Package*>(); // FIX: Create the new cache
-    auto start_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> max_duration_seconds(m_maxTime);
+    auto inBagCache = std::unordered_set<const Package*>();
+    auto start_time = std::chrono::steady_clock::now();
+    auto deadline = start_time +
+        std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(m_maxTime)
+    );
+    auto halfway = start_time + (deadline - start_time) / 2;
     
     while (!packages.empty()) {
-        if (std::chrono::high_resolution_clock::now() - start_time > max_duration_seconds) {
+        if (std::chrono::steady_clock::now() >= halfway) {
             break;
         }
         Package* packageToAdd = pickStrategy(packages);
@@ -160,18 +163,18 @@ std::unique_ptr<Bag> ConstructiveSolutions::fillBagWithStrategy(int bagSize, std
         // FIX: Pass the new cache to the function
         canPackageBeAdded(*bag, *packageToAdd, bagSize, compatibilityCache, inBagCache);
     }
+    searchEngine.localSearch(*bag, bagSize, packages, SEARCH_ENGINE::MovementType::SWAP_REMOVE_1_ADD_1, 
+            ALGORITHM::LOCAL_SEARCH::FIRST_IMPROVEMENT, m_dependencyGraph, 100, 200, halfway);
     
-    // Pass the dereferenced unique_ptr (*bag)
     SOLUTION_REPAIR::repair(*bag, bagSize, m_dependencyGraph, m_generator());
 
-    auto end_time = std::chrono::high_resolution_clock::now();
+    auto end_time = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed_seconds = end_time - start_time;
-    
+
     bag->setAlgorithmTime(elapsed_seconds.count());
     return bag;
 }
 
-// FIX: Added inBagCache parameter and logic
 bool ConstructiveSolutions::canPackageBeAdded(Bag& bag, const Package& package, int maxCapacity,
                                   std::unordered_map<const Package*, bool>& cache,
                                   std::unordered_set<const Package*>& inBagCache) {
