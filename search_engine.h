@@ -24,6 +24,7 @@ namespace SEARCH_ENGINE {
         SWAP_REMOVE_1_ADD_2,
         SWAP_REMOVE_2_ADD_1,
         EJECTION_CHAIN,
+        NONE
     };
 
     std::string toString(MovementType movement);
@@ -67,10 +68,11 @@ private:
     bool exploreSwap11NeighborhoodRandomImprovement(Bag&, int, const std::vector<Package*>&, const std::unordered_map<const Package*, std::vector<const Dependency*>>&, int);
     bool exploreSwap11NeighborhoodBestImprovement(Bag&, int, const std::vector<Package*>&, const std::unordered_map<const Package*, std::vector<const Dependency*>>&, int);
 
-    // 1-2, 2-1, and Ejection Chain Operators (Best Improvement)
+    // 1-2, 2-1, and Ejection Chain Operators (Best Improvement & First Improvement)
     bool exploreSwap12NeighborhoodBestImprovement(Bag&, int, const std::vector<Package*>&, const std::unordered_map<const Package*, std::vector<const Dependency*>>&, int);
     bool exploreSwap21NeighborhoodBestImprovement(Bag&, int, const std::vector<Package*>&, const std::unordered_map<const Package*, std::vector<const Dependency*>>&, int);
-    bool exploreEjectionChainNeighborhoodBestImprovement(Bag&, int, const std::vector<Package*>&, const std::unordered_map<const Package*, std::vector<const Dependency*>>&, int);
+    bool exploreEjectionChainNeighborhoodFirstImprovement(Bag &currentBag, int bagSize, const std::vector<Package *> &packagesOutsideBag, const std::unordered_map<const Package *, std::vector<const Dependency *>> &dependencyGraph);
+    bool exploreEjectionChainNeighborhoodBestImprovement(Bag &, int, const std::vector<Package *> &, const std::unordered_map<const Package *, std::vector<const Dependency *>> &, int);
 
     // --- Utility Function ---
     void buildOutsidePackages(const std::unordered_set<const Package*>& packagesInBag,

@@ -20,8 +20,10 @@ std::string toString(MovementType movement)
             return "SWAP_REMOVE_1_ADD_2";
         case MovementType::SWAP_REMOVE_2_ADD_1:
             return "SWAP_REMOVE_2_ADD_1";
+        case MovementType::EJECTION_CHAIN:
+            return "EJECTION_CHAIN";
         default:
-        return "EJECTION_CHAIN";
+        return "NONE";
     }
 }
 }
@@ -116,7 +118,14 @@ bool SearchEngine::applyMovement(const SEARCH_ENGINE::MovementType& move, Bag& c
             return exploreSwap21NeighborhoodBestImprovement(currentBag, bagSize, packagesOutsideBag, dependencyGraph, maxIterations);
         
         case SEARCH_ENGINE::MovementType::EJECTION_CHAIN:
-            return exploreEjectionChainNeighborhoodBestImprovement(currentBag, bagSize, packagesOutsideBag, dependencyGraph, maxIterations);
+            switch (localSearchMethod)
+            {
+            case ALGORITHM::LOCAL_SEARCH::FIRST_IMPROVEMENT:
+                return exploreEjectionChainNeighborhoodFirstImprovement(currentBag, bagSize, packagesOutsideBag, dependencyGraph);
+                break;
+            default:
+                return exploreEjectionChainNeighborhoodBestImprovement(currentBag, bagSize, packagesOutsideBag, dependencyGraph, maxIterations);
+            }
     }
     return false;
 }
@@ -378,6 +387,79 @@ bool SearchEngine::exploreSwap21NeighborhoodBestImprovement(
         currentBag.addPackageIfPossible(*bestMove.p_out, bagSize, dependencyGraph.at(bestMove.p_out));
         return true;
     }
+    return false;
+}
+
+bool SearchEngine::exploreEjectionChainNeighborhoodFirstImprovement(
+    Bag& currentBag, int bagSize, const std::vector<Package*>& packagesOutsideBag,
+    const std::unordered_map<const Package*, std::vector<const Dependency*>>& dependencyGraph)
+{
+    if (currentBag.getPackages().empty() || packagesOutsideBag.empty()) return false;
+
+    const auto& originalRefCount = currentBag.getDependencyRefCount();
+    std::vector<const Package*> packagesInVec(currentBag.getPackages().begin(), currentBag.getPackages().end());
+
+    for (const Package* triggerPackage : packagesInVec) {
+
+        std::unordered_map<const Dependency*, int> tempRefCount = originalRefCount;
+        std::vector<const Package*> currentEjectionSet;
+        std::unordered_set<const Package*> processedForEjection;
+        std::vector<const Package*> packagesToProcess = {triggerPackage};
+        processedForEjection.insert(triggerPackage);
+
+        while (!packagesToProcess.empty()) {
+            const Package* packageToRemove = packagesToProcess.back();
+            packagesToProcess.pop_back();
+            currentEjectionSet.push_back(packageToRemove);
+
+            for (const auto* dep : dependencyGraph.at(packageToRemove)) {
+                if (tempRefCount.count(dep)) tempRefCount[dep]--;
+            }
+
+            for (const Package* otherPackage : packagesInVec) {
+                if (processedForEjection.count(otherPackage)) continue;
+
+                for (const auto* dep : dependencyGraph.at(otherPackage)) {
+                    if (tempRefCount.count(dep) && tempRefCount.at(dep) == 0) {
+                        packagesToProcess.push_back(otherPackage);
+                        processedForEjection.insert(otherPackage);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (currentEjectionSet.size() <= 1) continue;
+
+        int removedBenefit = 0;
+        int sizeAfterRemoval = currentBag.getSize();
+        for (const auto* p_removed : currentEjectionSet) {
+            removedBenefit += p_removed->getBenefit();
+            sizeAfterRemoval -= p_removed->getDependenciesSize();
+        }
+
+        for (Package* p_out : packagesOutsideBag) {
+            int delta = p_out->getBenefit() - removedBenefit;
+            if (delta <= 0) continue;
+
+            int sizeIncrease = 0;
+            for (const auto* dep : dependencyGraph.at(p_out)) {
+                if (tempRefCount.count(dep) == 0 || tempRefCount.at(dep) == 0) {
+                    sizeIncrease += dep->getSize();
+                }
+            }
+
+            if (sizeAfterRemoval + sizeIncrease <= bagSize) {
+                // Apply FIRST IMPROVEMENT immediately
+                for (const auto* p_to_remove : currentEjectionSet) {
+                    currentBag.removePackage(*p_to_remove, dependencyGraph.at(p_to_remove));
+                }
+                currentBag.addPackageIfPossible(*p_out, bagSize, dependencyGraph.at(p_out));
+                return true;
+            }
+        }
+    }
+
     return false;
 }
 
